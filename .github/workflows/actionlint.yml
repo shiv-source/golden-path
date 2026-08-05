@@ -1,4 +1,4 @@
-name: 'Workflow Lint'
+name: 'Github Action Workflow Lint'
 
 on:
   workflow_call:
