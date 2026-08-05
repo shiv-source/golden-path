@@ -14,7 +14,7 @@ on:
       repo:
         description: 'Repository to check (defaults to current)'
         type: string
-        default: '${{ github.repository }}'
+        default: ''
 
 jobs:
   check:
@@ -37,7 +37,7 @@ jobs:
               workspace: process.env.GITHUB_WORKSPACE,
               requiredFiles,
               checkBranchProtection: ${{ inputs.require-branch-protection }},
-              repo: '${{ inputs.repo }}',
+              repo: '${{ inputs.repo || github.repository }}',
             });
 
             core.setOutput('passed', String(result.passed));

@@ -52,11 +52,17 @@ export function parseOnboardingIssue(body) {
  * @param {string} value
  * @returns {string}
  */
+const NORMALIZE_MAP = {
+  nodejs: 'node',
+  documentation: 'docs',
+};
+
 function normalizeField(value) {
-  return value
+  const normalized = value
     .toLowerCase()
     .replace(/[\s/]+/g, '-')
     .replace(/\./g, '');
+  return NORMALIZE_MAP[normalized] ?? normalized;
 }
 
 /**

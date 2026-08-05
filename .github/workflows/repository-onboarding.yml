@@ -7,7 +7,7 @@ jobs:
   onboard:
     name: Onboard Repository
     if: |
-      github.event.issue.title == '[Onboarding]: ' ||
+      contains(github.event.issue.title, '[Onboarding]:') ||
       github.event.label.name == 'approved'
     runs-on: ubuntu-latest
     permissions:

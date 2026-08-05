@@ -4,7 +4,7 @@
 const PROFILE_MAP = {
   node: {
     library: ['common', 'node-library'],
-    service: ['common', 'node-service'],
+    service: ['common', 'node-library', 'node-service'],
     frontend: ['common', 'node-library'],
     cli: ['common', 'node-library'],
     docs: ['common'],

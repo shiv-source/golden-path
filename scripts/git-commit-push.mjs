@@ -1,11 +1,12 @@
 // Git operations for workflow automation — configure, branch, commit, push.
 // Called from onboarding and apply-repository-config workflows.
 
+import { execSync } from 'node:child_process';
+
 /**
  * Configure git user for the current workflow run.
  */
 export function configureGit() {
-  const { execSync } = require('node:child_process');
   execSync('git config user.name "github-actions[bot]"');
   execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
 }
@@ -20,7 +21,6 @@ export function configureGit() {
  * @returns {{ pushed: boolean, skipped: boolean }}
  */
 export function commitAndPush(opts) {
-  const { execSync } = require('node:child_process');
   const { branch, message, cwd, files } = opts;
   const options = cwd ? { cwd } : {};
 

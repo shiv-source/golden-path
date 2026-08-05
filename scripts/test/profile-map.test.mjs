@@ -12,8 +12,12 @@ describe('profile-map', () => {
       assert.deepEqual(resolveProfilesFor('node', 'library'), ['common', 'node-library']);
     });
 
-    it('returns common + node-service for node/service', () => {
-      assert.deepEqual(resolveProfilesFor('node', 'service'), ['common', 'node-service']);
+    it('returns common + node-library + node-service for node/service', () => {
+      assert.deepEqual(resolveProfilesFor('node', 'service'), [
+        'common',
+        'node-library',
+        'node-service',
+      ]);
     });
 
     it('returns common + go-service for go/service', () => {

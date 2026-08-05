@@ -38,11 +38,9 @@ describe('profile integration', () => {
     const profiles = readProfiles({ profilesDir, names: ['common', 'node-library'] });
     assert.ok(profiles.length === 2);
 
-    const { files, conflicts } = mergeProfiles(profiles);
+    const { files } = mergeProfiles(profiles);
     assert.ok(files.length > 0);
-    // node-library profile files should be present
     assert.ok(files.some((f) => f.path === '.prettierrc'));
-    // common profile files should be present
     assert.ok(files.some((f) => f.path === 'CODEOWNERS'));
   });
 });

@@ -42,7 +42,7 @@ describe('parse-onboarding-issue', () => {
     );
 
     const result = parseOnboardingIssue(body);
-    assert.equal(result.language, 'nodejs');
+    assert.equal(result.language, 'node');
     assert.equal(result.type, 'service');
   });
 
