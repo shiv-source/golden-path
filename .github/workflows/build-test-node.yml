@@ -18,7 +18,7 @@ on:
       build-command:
         description: 'Build command override'
         type: string
-        default: 'pnpm build'
+        default: 'npm run build'
 
 jobs:
   lint:
@@ -26,16 +26,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '${{ inputs.node-version }}'
-          cache: 'pnpm'
+          cache: 'npm'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
         working-directory: '${{ inputs.working-directory }}'
       - name: Lint
-        run: pnpm lint
+        run: npm run lint
         working-directory: '${{ inputs.working-directory }}'
 
   typecheck:
@@ -43,16 +42,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '${{ inputs.node-version }}'
-          cache: 'pnpm'
+          cache: 'npm'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
         working-directory: '${{ inputs.working-directory }}'
       - name: Type check
-        run: pnpm typecheck
+        run: npm run typecheck
         working-directory: '${{ inputs.working-directory }}'
 
   test:
@@ -64,16 +62,15 @@ jobs:
         shard: ${{ fromJSON(format('[1,{0}]', inputs.shard-count)) }}
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '${{ inputs.node-version }}'
-          cache: 'pnpm'
+          cache: 'npm'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
         working-directory: '${{ inputs.working-directory }}'
       - name: Test
-        run: pnpm test -- --shard=${{ matrix.shard }}/${{ inputs.shard-count }}
+        run: npm test -- --shard=${{ matrix.shard }}/${{ inputs.shard-count }}
         working-directory: '${{ inputs.working-directory }}'
 
   build:
@@ -82,13 +79,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '${{ inputs.node-version }}'
-          cache: 'pnpm'
+          cache: 'npm'
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
         working-directory: '${{ inputs.working-directory }}'
       - name: Build
         run: '${{ inputs.build-command }}'

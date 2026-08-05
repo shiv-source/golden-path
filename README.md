@@ -18,16 +18,16 @@ git clone https://github.com/your-org/golden-path.git
 cd golden-path
 
 # Install (only eslint + prettier for script linting)
-pnpm install
+npm ci
 
 # Run script tests
-pnpm test
+npm test
 
 # Lint scripts
-pnpm lint
+npm lint
 
 # Lint workflows (requires actionlint)
-pnpm lint:workflows
+npm lint:workflows
 ```
 
 ## Using Workflows

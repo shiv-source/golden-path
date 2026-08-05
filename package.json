@@ -3,8 +3,7 @@
   "private": true,
   "description": "Internal developer platform — reusable workflows, profiles, and onboarding for org-wide GitHub standardization.",
   "engines": {
-    "node": ">=22",
-    "pnpm": ">=10"
+    "node": ">=22"
   },
   "scripts": {
     "lint": "eslint scripts/",

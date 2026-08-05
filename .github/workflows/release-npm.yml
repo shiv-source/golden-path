@@ -41,7 +41,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '${{ inputs.node-version }}'
@@ -49,7 +48,7 @@ jobs:
           scope: '${{ inputs.scope }}'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
         working-directory: '${{ inputs.working-directory }}'
 
       - name: Determine next version
@@ -61,7 +60,7 @@ jobs:
 
       - name: Publish to npm
         if: ${{ steps.release-please.outputs.release_created && !inputs.dry-run }}
-        run: pnpm publish --provenance
+        run: npm publish --provenance
         working-directory: '${{ inputs.working-directory }}'
         env:
           NODE_AUTH_TOKEN: '${{ secrets.NPM_TOKEN }}'
