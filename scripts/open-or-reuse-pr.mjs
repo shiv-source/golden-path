@@ -31,6 +31,5 @@ export async function openOrReusePR(opts) {
   const url = await ghSh(
     `pr create --repo ${repo} --base ${baseBranch} --head ${headBranch} --title "${title}" --body "${fullBody}"`,
   );
-  console.log(`PR created: ${url}`);
   return { url, reused: false };
 }

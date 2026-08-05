@@ -7,8 +7,10 @@ import { execSync } from 'node:child_process';
  * Configure git user for the current workflow run.
  * @param {string} [cwd] — working directory (defaults to current)
  */
+const silent = { stdio: 'pipe' };
+
 export function configureGit(cwd) {
-  const opts = cwd ? { cwd } : {};
+  const opts = { ...silent, ...(cwd ? { cwd } : {}) };
   execSync('git config user.name "github-actions[bot]"', opts);
   execSync('git config user.email "github-actions[bot]@users.noreply.github.com"', opts);
 }
@@ -24,7 +26,7 @@ export function configureGit(cwd) {
  */
 export function commitAndPush(opts) {
   const { branch, message, cwd, files } = opts;
-  const options = cwd ? { cwd } : {};
+  const options = { ...silent, ...(cwd ? { cwd } : {}) };
 
   execSync(`git checkout -b "${branch}"`, options);
 
@@ -37,7 +39,6 @@ export function commitAndPush(opts) {
   try {
     execSync(`git commit -m "${message}"`, options);
   } catch {
-    // No changes to commit — not an error
     return { pushed: false, skipped: true };
   }
 
@@ -45,7 +46,6 @@ export function commitAndPush(opts) {
     execSync(`git push origin "${branch}" --force`, options);
     return { pushed: true, skipped: false };
   } catch {
-    // Push may fail in test environments with no remote
     return { pushed: false, skipped: false };
   }
 }

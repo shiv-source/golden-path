@@ -12,7 +12,7 @@ import { execSync } from 'node:child_process';
  */
 export function ghSh(cmd, options) {
   try {
-    return execSync(`gh ${cmd}`, { encoding: 'utf-8', ...options }).trim();
+    return execSync(`gh ${cmd}`, { encoding: 'utf-8', stdio: 'pipe', ...options }).trim();
   } catch {
     return '';
   }
