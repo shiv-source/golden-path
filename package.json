@@ -10,10 +10,12 @@
     "lint:workflows": "actionlint .github/workflows/*.yml",
     "test": "node --test 'scripts/test/**/*.test.mjs'",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "eslint": "^9.0.0",
-    "prettier": "^3.4.0"
+    "eslint": "9.39.5",
+    "husky": "9.1.7",
+    "prettier": "3.9.6"
   }
 }
