@@ -76,34 +76,50 @@ jobs:
 
       - name: Create branch and PR
         id: pr
-        env:
-          GH_TOKEN: '${{ github.token }}'
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { openOrReusePR } = await import(
+              '${{ github.workspace }}/scripts/open-or-reuse-pr.mjs'
+            );
+            const { execSync } = require('node:child_process');
 
-          branch="feature/onboard-${{ steps.parse.outputs.repoName }}"
-          git checkout -b "$branch"
-          git add repositories/
-          git commit -m "chore: onboard ${{ steps.parse.outputs.repoName }}" || echo "No changes"
-          git push origin "$branch" --force
+            execSync('git config user.name "github-actions[bot]"');
+            execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
 
-          pr_url=$(gh pr create \
-            --base main \
-            --head "$branch" \
-            --title "Onboard ${{ steps.parse.outputs.repoName }}" \
-            --body "## Repository Onboarding
+            const branch = 'feature/onboard-${{ steps.parse.outputs.repoName }}';
+            execSync(`git checkout -b ${branch}`);
+            execSync('git add repositories/');
+            try {
+              execSync('git commit -m "chore: onboard ${{ steps.parse.outputs.repoName }}"');
+            } catch {
+              core.info('No changes to commit');
+            }
+            execSync(`git push origin ${branch} --force`);
 
-          **Repository:** \`${{ steps.parse.outputs.repoName }}\`
-          **Language:** ${{ steps.parse.outputs.language }}
-          **Type:** ${{ steps.parse.outputs.type }}
-          **Profiles:** $(echo '${{ steps.config.outputs.profiles }}' | jq -r 'join(", ")')
+            const profiles = JSON.parse('${{ steps.config.outputs.profiles }}').join(', ');
 
-          Generated \`repositories/${{ steps.parse.outputs.repoName }}.yaml\`.
+            const result = await openOrReusePR({
+              repo: '${{ github.repository }}',
+              baseBranch: 'main',
+              headBranch: branch,
+              title: 'Onboard ${{ steps.parse.outputs.repoName }}',
+              body: [
+                '## Repository Onboarding',
+                '',
+                '**Repository:** `${{ steps.parse.outputs.repoName }}`',
+                '**Language:** ${{ steps.parse.outputs.language }}',
+                '**Type:** ${{ steps.parse.outputs.type }}',
+                '**Profiles:** ' + profiles,
+                '',
+                'Generated `repositories/${{ steps.parse.outputs.repoName }}.yaml`.',
+                '',
+                'Once merged, `apply-repository-config.yml` will create a PR in the target repository to apply the standard configuration files.',
+              ].join('\n'),
+            });
 
-          Once merged, \`apply-repository-config.yml\` will create a PR in the target repository to apply the standard configuration files." 2>&1)
-
-          echo "pr_url=$pr_url" >> "$GITHUB_OUTPUT"
+            core.setOutput('prUrl', result.url);
+            core.setOutput('reused', String(result.reused));
 
       - name: Comment on issue
         if: steps.pr.outputs.pr_url != ''

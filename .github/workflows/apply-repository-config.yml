@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       repo:
-        description: 'Repository to apply config to (owner/name)'
+        description: 'Repository to apply config to (full name, e.g. org/repo)'
         type: string
         required: true
 
@@ -40,12 +40,6 @@ jobs:
             );
             core.setOutput('repos', JSON.stringify(repos));
 
-      - name: Clone target repository
-        env:
-          GH_TOKEN: '${{ github.token }}'
-        run: |
-          gh repo clone "${{ github.repository_owner }}/${{ matrix.repo }}" target-repo
-
       - name: Read repo config and resolve profiles
         id: resolve
         uses: actions/github-script@v7
@@ -53,76 +47,148 @@ jobs:
           script: |
             const fs = require('node:fs');
             const path = require('node:path');
-            const yaml = fs.readFileSync(
-              path.join(process.env.GITHUB_WORKSPACE, 'repositories', '${{ matrix.repo }}.yaml'),
-              'utf-8'
+            const configPath = path.join(
+              process.env.GITHUB_WORKSPACE, 'repositories', '${{ matrix.repo }}.yaml'
             );
-            core.setOutput('config', yaml);
-            core.info(`Config: ${yaml}`);
+            const config = fs.readFileSync(configPath, 'utf-8');
+            core.setOutput('config', config);
+            core.info(`Config: ${config}`);
 
-      - name: Copy profile files to target repo
-        run: |
-          # For each profile listed in the config, copy its template files
-          # into the target repo.  The scripts/merge-profiles.mjs handles this
-          # in a fuller implementation.
-          for profile in common node-service; do
-            if [ -d "profiles/$profile" ]; then
-              echo "Applying profile: $profile"
-              cp -r "profiles/$profile/." target-repo/
-            fi
-          done
+      - name: Merge profiles and copy files
+        id: merge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { mergeProfiles } = await import(
+              '${{ github.workspace }}/scripts/merge-profiles.mjs'
+            );
+            const { resolveProfilesFor } = await import(
+              '${{ github.workspace }}/scripts/lib/profile-map.mjs'
+            );
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const { execSync } = require('node:child_process');
 
-      - name: Detect conflicts
-        id: conflicts
-        run: |
-          cd target-repo
-          conflicts=""
-          for file in .editorconfig CODEOWNERS SECURITY.md dependabot.yml; do
-            if [ -f "../profiles/common/$file" ] && [ -f "$file" ]; then
-              if ! diff -q "../profiles/common/$file" "$file" > /dev/null 2>&1; then
-                conflicts="$conflicts $file (CONFLICT — manual review needed)"
-              fi
-            fi
-          done
-          if [ -n "$conflicts" ]; then
-            echo "conflicts_found=true" >> "$GITHUB_OUTPUT"
-            echo -e "conflicts=$conflicts" >> "$GITHUB_OUTPUT"
-          else
-            echo "conflicts_found=false" >> "$GITHUB_OUTPUT"
-          fi
+            const repoName = '${{ matrix.repo }}'.split('/').pop();
+            const workspace = process.env.GITHUB_WORKSPACE;
+            const profilesDir = path.join(workspace, 'profiles');
+            const targetDir = path.join(workspace, 'target-repo');
+
+            // Clone target repo
+            const repoFull = '${{ github.repository_owner }}/${{ matrix.repo }}'.includes('/')
+              ? '${{ matrix.repo }}'
+              : '${{ github.repository_owner }}/${{ matrix.repo }}';
+            execSync(`gh repo clone ${repoFull} ${targetDir}`, { stdio: 'inherit' });
+
+            // Determine profiles from the config filename pattern
+            // Parse the config to extract language/type, then resolve profiles
+            const configYaml = fs.readFileSync(
+              path.join(workspace, 'repositories', `${{ matrix.repo }}.yaml`), 'utf-8'
+            );
+
+            // Extract profile names listed in the config
+            const profileNames = [];
+            for (const line of configYaml.split('\n')) {
+              const match = line.match(/^\s+-\s+(\S+)/);
+              if (match) profileNames.push(match[1]);
+            }
+
+            // Build profile objects from filesystem
+            const profiles = [];
+            for (const name of profileNames) {
+              const profilePath = path.join(profilesDir, name);
+              if (!fs.existsSync(profilePath)) {
+                core.warning(`Profile directory not found: ${profilePath}`);
+                continue;
+              }
+              const files = [];
+              const walkDir = (dir, base) => {
+                for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                  const fullPath = path.join(dir, entry.name);
+                  const relPath = path.relative(base, fullPath);
+                  if (entry.isDirectory()) {
+                    walkDir(fullPath, base);
+                  } else {
+                    files.push({
+                      path: relPath,
+                      content: fs.readFileSync(fullPath, 'utf-8'),
+                    });
+                  }
+                }
+              };
+              walkDir(profilePath, profilePath);
+              profiles.push({ name, files });
+            }
+
+            // Merge profiles with conflict detection
+            const { files, conflicts } = mergeProfiles(profiles);
+
+            // Write merged files to target repo
+            for (const file of files) {
+              const destPath = path.join(targetDir, file.path);
+              fs.mkdirSync(path.dirname(destPath), { recursive: true });
+              fs.writeFileSync(destPath, file.content);
+            }
+
+            core.setOutput('filesCopied', String(files.length));
+            core.setOutput('conflictsFound', String(conflicts.length > 0));
+            core.setOutput(
+              'conflictsList',
+              conflicts.map(c => `- \`${c.path}\`: ${c.message}`).join('\n')
+            );
 
       - name: Create PR in target repository
-        env:
-          GH_TOKEN: '${{ github.token }}'
-        run: |
-          cd target-repo
-          branch="feature/apply-org-config"
-          git checkout -b "$branch"
-          git add -A
-          git commit -m "chore: apply organization standard configuration" || echo "No changes to commit"
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { openOrReusePR } = await import(
+              '${{ github.workspace }}/scripts/open-or-reuse-pr.mjs'
+            );
+            const { execSync } = require('node:child_process');
+            const path = require('node:path');
 
-          if [ "$(git rev-list --count $branch)" -eq 0 ]; then
-            echo "No changes — skipping PR."
-            exit 0
-          fi
+            const targetDir = path.join(process.env.GITHUB_WORKSPACE, 'target-repo');
+            const branch = 'feature/apply-org-config';
+            const repo = '${{ github.repository_owner }}/${{ matrix.repo }}'.includes('/')
+              ? '${{ matrix.repo }}'
+              : '${{ github.repository_owner }}/${{ matrix.repo }}';
 
-          git push origin "$branch" --force
+            // Configure git and create branch
+            execSync('git config user.name "github-actions[bot]"');
+            execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
+            execSync(`git checkout -b ${branch}`, { cwd: targetDir });
+            execSync('git add -A', { cwd: targetDir });
+            try {
+              execSync('git commit -m "chore: apply organization standard configuration"', { cwd: targetDir });
+            } catch {
+              core.info('No changes to commit — skipping PR.');
+              return;
+            }
+            execSync(`git push origin ${branch} --force`, { cwd: targetDir });
 
-          body="## Apply Organization Standard Configuration
+            const conflictsSection = '${{ steps.merge.outputs.conflictsFound }}' === 'true'
+              ? '\n### ⚠️ Conflicts Detected\n\nThe following files have different content and require manual review:\n\n${{ steps.merge.outputs.conflictsList }}\n'
+              : '';
 
-          This PR applies standardized configuration files from the [golden-path](https://github.com/${{ github.repository }}) profiles.
+            const body = [
+              '## Apply Organization Standard Configuration',
+              '',
+              'This PR applies standardized configuration files from [golden-path](https://github.com/${{ github.repository }}).',
+              '',
+              '**Repository:** `${{ matrix.repo }}`',
+              '**Files copied:** ${{ steps.merge.outputs.filesCopied }}',
+              conflictsSection,
+              '> This PR was automatically generated. Please review the changes carefully.',
+            ].filter(Boolean).join('\n');
 
-          **Repository:** \`${{ matrix.repo }}\`
-          **Config:** \`${{ steps.resolve.outputs.config }}\`
+            const result = await openOrReusePR({
+              repo,
+              baseBranch: 'main',
+              headBranch: branch,
+              title: 'Apply organization standard configuration',
+              body,
+            });
 
-          ${{ steps.conflicts.outputs.conflicts_found == 'true' && format('### Conflicts Detected\n\nThe following files have different content in the target repository and require manual review:\n\n{0}', steps.conflicts.outputs.conflicts) || '' }}
-
-          > This PR was automatically generated. Please review the changes carefully."
-
-          pr_url=$(gh pr create \
-            --title "Apply organization standard configuration" \
-            --body "$body" \
-            --base main \
-            --head "$branch" 2>&1)
-
-          echo "PR created: $pr_url"
+            core.setOutput('prUrl', result.url);
+            core.setOutput('reused', String(result.reused));
