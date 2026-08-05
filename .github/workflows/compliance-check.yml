@@ -1,0 +1,50 @@
+name: 'Compliance Check'
+
+on:
+  workflow_call:
+    inputs:
+      required-files:
+        description: 'Space-separated list of required file paths'
+        type: string
+        default: '.editorconfig CODEOWNERS SECURITY.md'
+      require-branch-protection:
+        description: 'Check branch protection rules'
+        type: boolean
+        default: true
+      repo:
+        description: 'Repository to check (defaults to current)'
+        type: string
+        default: '${{ github.repository }}'
+
+jobs:
+  check:
+    name: Compliance Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify required files exist
+        run: |
+          missing=""
+          for file in ${{ inputs.required-files }}; do
+            if [ ! -f "$file" ]; then
+              missing="$missing $file"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing required files:$missing"
+            exit 1
+          fi
+          echo "All required files present."
+      - name: Check branch protection
+        if: ${{ inputs.require-branch-protection }}
+        env:
+          GH_TOKEN: '${{ github.token }}'
+        run: |
+          branch_protection=$(gh api \
+            "repos/${{ inputs.repo }}/branches/${{ github.event.repository.default_branch }}/protection" \
+            --jq '.url // empty' 2>/dev/null || echo "")
+          if [ -z "$branch_protection" ]; then
+            echo "::warning::Branch protection is not enabled on the default branch."
+          else
+            echo "Branch protection is enabled."
+          fi
