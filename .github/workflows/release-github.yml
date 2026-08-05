@@ -54,7 +54,7 @@ jobs:
       release_created: '${{ steps.release-please.outputs.release_created || steps.tag-info.outputs.release_created }}'
       isReleased: '${{ steps.release-please.outputs.release_created || steps.tag-info.outputs.release_created }}'
       release_type: '${{ steps.release-type.outputs.type || steps.tag-info.outputs.type }}'
-      is_prerelease: "${{ inputs.prerelease-branch != '' && inputs.target-branch == inputs.prerelease-branch }}"
+      is_prerelease: "${{ (inputs.prerelease-branch != '' && inputs.target-branch == inputs.prerelease-branch) || steps.tag-info.outputs.type == 'rc' }}"
       major: '${{ steps.release-please.outputs.major || steps.tag-info.outputs.major }}'
       minor: '${{ steps.release-please.outputs.minor || steps.tag-info.outputs.minor }}'
       patch: '${{ steps.release-please.outputs.patch || steps.tag-info.outputs.patch }}'
@@ -87,7 +87,7 @@ jobs:
           echo "major=$major" >> "$GITHUB_OUTPUT"
           echo "minor=$minor" >> "$GITHUB_OUTPUT"
           echo "patch=$patch" >> "$GITHUB_OUTPUT"
-          case "$TAG" in *-rc*|*-alpha*|*-beta*) echo "type=rc" >> "$GITHUB_OUTPUT" ;; *) echo "type=tag" >> "$GITHUB_OUTPUT" ;; esac
+          case "${TAG,,}" in *-rc.*|*-rc|*-alpha.*|*-alpha|*-beta.*|*-beta) echo "type=rc" >> "$GITHUB_OUTPUT" ;; *) echo "type=tag" >> "$GITHUB_OUTPUT" ;; esac
 
       - name: Determine release type
         id: release-type
@@ -141,7 +141,7 @@ jobs:
             set -- "$@" --prerelease
           fi
           if [ "$IS_TAG" = "true" ]; then
-            case "$TAG" in *-rc*|*-alpha*|*-beta*) set -- "$@" --prerelease ;; esac
+            case "${TAG,,}" in *-rc.*|*-rc|*-alpha.*|*-alpha|*-beta.*|*-beta) set -- "$@" --prerelease ;; esac
           fi
           ${{ inputs.generate-release-notes }} && set -- "$@" --generate-notes
           if [ -s "$NOTES_FILE" ]; then
