@@ -35,7 +35,7 @@ export function applyConfig({ workspace, repoName, targetRepo, org }) {
   // Substitute org-specific values when applying to a different org
   const tokens = {
     'shiv-source': org,
-    'shiv-source.com': `${org}.com`,
+    'hello@shivkumar.me': `security@${org}.com`,
   };
 
   for (const f of merged.files) {

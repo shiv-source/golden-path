@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-Please report security vulnerabilities to **security@shiv-source.com**.
+Please report security vulnerabilities to **hello@shivkumar.me**.
 Do not open public issues for security concerns.
 
 ## Supported Versions
