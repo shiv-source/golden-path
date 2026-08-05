@@ -42,3 +42,6 @@ jobs:
   actionlint:
     name: Workflow Lint
     uses: ./.github/workflows/actionlint.yml
+  secret-scan:
+    name: Secret Scan
+    uses: ./.github/workflows/secret-scan-betterleaks.yml
