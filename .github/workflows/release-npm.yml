@@ -1,0 +1,67 @@
+name: 'Release (npm)'
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version'
+        type: string
+        default: '22'
+      registry:
+        description: 'npm registry URL'
+        type: string
+        default: 'https://registry.npmjs.org'
+      scope:
+        description: 'npm scope (e.g., @myorg) — omit for unscoped packages'
+        type: string
+        default: ''
+      dry-run:
+        description: 'Run release-please in dry-run mode (no actual publish)'
+        type: boolean
+        default: false
+      working-directory:
+        description: 'Working directory for the npm package'
+        type: string
+        default: '.'
+    secrets:
+      NPM_TOKEN:
+        description: 'npm registry auth token'
+        required: true
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '${{ inputs.node-version }}'
+          registry-url: '${{ inputs.registry }}'
+          scope: '${{ inputs.scope }}'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: '${{ inputs.working-directory }}'
+
+      - name: Determine next version
+        id: release-please
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: node
+          dry-run: '${{ inputs.dry-run }}'
+
+      - name: Publish to npm
+        if: ${{ steps.release-please.outputs.release_created && !inputs.dry-run }}
+        run: pnpm publish --provenance
+        working-directory: '${{ inputs.working-directory }}'
+        env:
+          NODE_AUTH_TOKEN: '${{ secrets.NPM_TOKEN }}'
