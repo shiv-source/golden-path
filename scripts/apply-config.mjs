@@ -1,5 +1,5 @@
 // Apply profile configuration to a target repository.
-// Orchestrates: read config → resolve profiles → merge files → clone target → write files.
+// Orchestrates: read config → resolve profiles → merge files → clone target → write files → substitute tokens.
 
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -12,10 +12,10 @@ import { mergeProfiles } from './merge-profiles.mjs';
  * @param {string} opts.workspace - GITHUB_WORKSPACE path
  * @param {string} opts.repoName - repository name (without owner)
  * @param {string} opts.targetRepo - full repo (owner/name) for cloning
+ * @param {string} opts.org - GitHub organization/owner name
  * @returns {{ profiles: string[], filesCopied: number, conflictsFound: boolean, conflictsList: string }}
  */
-export function applyConfig({ workspace, repoName, targetRepo }) {
-  // 1. Read config YAML and extract profile names
+export function applyConfig({ workspace, repoName, targetRepo, org }) {
   const configYaml = readFileSync(join(workspace, 'repositories', `${repoName}.yaml`), 'utf-8');
   const profileNames = [];
   for (const line of configYaml.split('\n')) {
@@ -23,22 +23,29 @@ export function applyConfig({ workspace, repoName, targetRepo }) {
     if (m && !line.trimStart().startsWith('#')) profileNames.push(m[1]);
   }
 
-  // 2. Read and merge profiles
   const profiles = readProfiles({
     profilesDir: join(workspace, 'profiles'),
     names: profileNames,
   });
   const merged = mergeProfiles(profiles);
 
-  // 3. Clone target repo
   const targetDir = join(workspace, 'target-repo');
   execSync(`gh repo clone ${targetRepo} ${targetDir}`, { stdio: 'inherit' });
 
-  // 4. Write merged files
+  // Write merged files with token substitution
+  const tokens = {
+    '{{ORG}}': org,
+    '{{ORG_DOMAIN}}': `${org}.com`,
+  };
+
   for (const f of merged.files) {
+    let content = f.content;
+    for (const [token, value] of Object.entries(tokens)) {
+      content = content.replaceAll(token, value);
+    }
     const dest = join(targetDir, f.path);
     mkdirSync(dirname(dest), { recursive: true });
-    writeFileSync(dest, f.content);
+    writeFileSync(dest, content);
   }
 
   return {

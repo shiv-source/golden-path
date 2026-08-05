@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-Please report security vulnerabilities to **security@your-org.com**.
+Please report security vulnerabilities to **security@{{ORG_DOMAIN}}**.
 Do not open public issues for security concerns.
 
 ## Supported Versions

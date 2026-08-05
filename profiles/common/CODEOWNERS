@@ -1,2 +1,3 @@
 # Default codeowners — update with your team handle
-* @your-org/platform-engineering
+# Default codeowners — set during onboarding from GITHUB_REPOSITORY_OWNER
+* @{{ORG}}

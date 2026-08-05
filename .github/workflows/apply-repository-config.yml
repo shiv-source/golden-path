@@ -65,12 +65,16 @@ jobs:
             const repoName = '${{ matrix.repo }}'.includes('/')
               ? '${{ matrix.repo }}'.split('/').pop()
               : '${{ matrix.repo }}';
+            const org = '${{ matrix.repo }}'.includes('/')
+              ? '${{ matrix.repo }}'.split('/')[0]
+              : '${{ github.repository_owner }}';
             const result = applyConfig({
               workspace: process.env.GITHUB_WORKSPACE,
               repoName,
               targetRepo: '${{ matrix.repo }}'.includes('/')
                 ? '${{ matrix.repo }}'
-                : '${{ github.repository_owner }}/${{ matrix.repo }}',
+                : `${org}/${{ matrix.repo }}`,
+              org,
             });
             core.setOutput('profiles', JSON.stringify(result.profiles));
             core.setOutput('filesCopied', String(result.filesCopied));
