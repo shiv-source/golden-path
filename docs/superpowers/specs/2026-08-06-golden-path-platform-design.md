@@ -24,22 +24,22 @@ An internal developer platform for a large GitHub Organization (100+ repos, 15+ 
 
 ## 2. Tech Stack
 
-| Layer | Choice | Version |
-|---|---|---|
-| Runtime | Node.js | 22.x LTS |
-| Package Manager | pnpm | 10.x |
-| Backend Framework | NestJS | 11.x |
-| Frontend | React SPA (Vite) | 19.x |
-| UI Components | shadcn/ui + Tailwind CSS | Latest |
-| Charts | chart.js + react-chartjs-2 | Latest |
-| Database | MongoDB via @nestjs/mongoose + Mongoose | Latest |
-| GitHub REST API | @octokit/rest | Latest |
-| GitHub GraphQL API | @octokit/graphql | Latest |
-| Webhooks | @octokit/webhooks | Latest |
-| Auth | @nestjs/passport + passport-github2 | Latest |
-| Cron | @nestjs/schedule | Latest |
-| Language | TypeScript | 5.x (strict mode) |
-| Monorepo | pnpm workspaces + Turborepo | Latest |
+| Layer              | Choice                                  | Version           |
+| ------------------ | --------------------------------------- | ----------------- |
+| Runtime            | Node.js                                 | 22.x LTS          |
+| Package Manager    | pnpm                                    | 10.x              |
+| Backend Framework  | NestJS                                  | 11.x              |
+| Frontend           | React SPA (Vite)                        | 19.x              |
+| UI Components      | shadcn/ui + Tailwind CSS                | Latest            |
+| Charts             | chart.js + react-chartjs-2              | Latest            |
+| Database           | MongoDB via @nestjs/mongoose + Mongoose | Latest            |
+| GitHub REST API    | @octokit/rest                           | Latest            |
+| GitHub GraphQL API | @octokit/graphql                        | Latest            |
+| Webhooks           | @octokit/webhooks                       | Latest            |
+| Auth               | @nestjs/passport + passport-github2     | Latest            |
+| Cron               | @nestjs/schedule                        | Latest            |
+| Language           | TypeScript                              | 5.x (strict mode) |
+| Monorepo           | pnpm workspaces + Turborepo             | Latest            |
 
 ---
 
@@ -120,12 +120,12 @@ golden-path/
 
 The platform is built and adopted in layers, each delivering standalone value:
 
-| Layer | Name | What | Value |
-|---|---|---|---|
-| 1 | Reusable Workflows | Standardized build/test/deploy/security/release workflows | Immediate — one `uses:` line for production-grade CI |
-| 2 | Onboarding System | Issue form → validate → generate config → PR into golden-path | Eliminates manual repo setup, ensures baseline compliance |
-| 3 | Dashboard | Repo health, activity, compliance, drift visibility | Single pane of glass for org-wide repo status |
-| 4 | Policy Engine + App | GitHub App listens to org events, enforces policies, detects drift | Proactive governance, audit-ready |
+| Layer | Name                | What                                                               | Value                                                     |
+| ----- | ------------------- | ------------------------------------------------------------------ | --------------------------------------------------------- |
+| 1     | Reusable Workflows  | Standardized build/test/deploy/security/release workflows          | Immediate — one `uses:` line for production-grade CI      |
+| 2     | Onboarding System   | Issue form → validate → generate config → PR into golden-path      | Eliminates manual repo setup, ensures baseline compliance |
+| 3     | Dashboard           | Repo health, activity, compliance, drift visibility                | Single pane of glass for org-wide repo status             |
+| 4     | Policy Engine + App | GitHub App listens to org events, enforces policies, detects drift | Proactive governance, audit-ready                         |
 
 ---
 
@@ -208,7 +208,7 @@ interface Repo {
     openPRAge: number;
   };
   compliance: {
-    score: number;                  // 0–100
+    score: number; // 0–100
     requiredFilesPresent: boolean;
     branchProtectionEnabled: boolean;
     secretScanningEnabled: boolean;
@@ -296,18 +296,18 @@ interface User {
 
 ### Workflow Catalog
 
-| Workflow | File | Purpose |
-|---|---|---|
-| Build & Test (Node) | `build-test-node.yml` | Install → lint → typecheck → test (sharded) → build |
-| Build & Test (Go) | `build-test-go.yml` | Lint → vet → test → build |
-| Security Scan | `security-scan.yml` | Gitleaks + CodeQL (language parameterized) |
-| Deploy (Service) | `deploy-service.yml` | Docker build → push → deploy |
-| Release (npm) | `release-npm.yml` | Conventional commits → version → changelog → publish |
-| Dependency Update | `dependency-update.yml` | Dependabot auto-merge for non-breaking updates |
-| Compliance Check | `compliance-check.yml` | Verify required files + branch protection |
-| Repository Onboarding | `repository-onboarding.yml` | Issue-driven: parse → validate → config → PR |
-| Apply Config | `apply-repository-config.yml` | Profile merge → PR into target repo |
-| Drift Check | `drift-check.yml` | Scheduled drift scan |
+| Workflow              | File                          | Purpose                                              |
+| --------------------- | ----------------------------- | ---------------------------------------------------- |
+| Build & Test (Node)   | `build-test-node.yml`         | Install → lint → typecheck → test (sharded) → build  |
+| Build & Test (Go)     | `build-test-go.yml`           | Lint → vet → test → build                            |
+| Security Scan         | `security-scan.yml`           | Gitleaks + CodeQL (language parameterized)           |
+| Deploy (Service)      | `deploy-service.yml`          | Docker build → push → deploy                         |
+| Release (npm)         | `release-npm.yml`             | Conventional commits → version → changelog → publish |
+| Dependency Update     | `dependency-update.yml`       | Dependabot auto-merge for non-breaking updates       |
+| Compliance Check      | `compliance-check.yml`        | Verify required files + branch protection            |
+| Repository Onboarding | `repository-onboarding.yml`   | Issue-driven: parse → validate → config → PR         |
+| Apply Config          | `apply-repository-config.yml` | Profile merge → PR into target repo                  |
+| Drift Check           | `drift-check.yml`             | Scheduled drift scan                                 |
 
 ### Usage Pattern
 
@@ -392,18 +392,19 @@ PR merged → apply-repository-config.yml triggers
 
 ### Pages
 
-| Route | Page | Purpose |
-|---|---|---|
-| `/` | Overview | Org summary cards + trend chart |
-| `/repos` | Repo List | Filterable, sortable repo table |
-| `/repos/:name` | Repo Detail | Single repo deep-dive |
-| `/profiles` | Profiles | Admin: manage profiles |
-| `/drift` | Drift Report | Repos that have drifted |
-| `/settings` | Settings | Platform config, access |
+| Route          | Page         | Purpose                         |
+| -------------- | ------------ | ------------------------------- |
+| `/`            | Overview     | Org summary cards + trend chart |
+| `/repos`       | Repo List    | Filterable, sortable repo table |
+| `/repos/:name` | Repo Detail  | Single repo deep-dive           |
+| `/profiles`    | Profiles     | Admin: manage profiles          |
+| `/drift`       | Drift Report | Repos that have drifted         |
+| `/settings`    | Settings     | Platform config, access         |
 
 ### Key Components
 
 **Overview Page:**
+
 - StatCards (total repos, compliance %, dormant, unmanaged)
 - ComplianceTrendChart (line, last 12 weeks)
 - ActivityLeaderboard (top 10 repos by commits)
@@ -411,11 +412,13 @@ PR merged → apply-repository-config.yml triggers
 - CIUsageChart (bar, top CI consumers)
 
 **Repo List Page:**
+
 - FilterBar (language, status, team, profile)
 - RepoTable (sortable: name, status, activity bar, compliance score, risk badge)
 - BulkActionBar (archive selected, re-sync selected)
 
 **Repo Detail Page:**
+
 - RepoHeader (name, language, type, status badge)
 - ActivityTimeline (commits, PRs, releases)
 - ComplianceCard (score + breakdown)
@@ -424,13 +427,13 @@ PR merged → apply-repository-config.yml triggers
 
 ### Chart.js Usage
 
-| Chart | Type | Data |
-|---|---|---|
-| Compliance trend | `line` with fill | % compliance over time, with target line |
-| Repo activity | `bar` (horizontal) | Commits/PRs per repo, top 10 |
-| CI usage | `bar` (stacked) | Minutes by repo, colored by workflow type |
-| Language distribution | `doughnut` | Repos per language |
-| Drift breakdown | `bar` | Drifted repos by severity |
+| Chart                 | Type               | Data                                      |
+| --------------------- | ------------------ | ----------------------------------------- |
+| Compliance trend      | `line` with fill   | % compliance over time, with target line  |
+| Repo activity         | `bar` (horizontal) | Commits/PRs per repo, top 10              |
+| CI usage              | `bar` (stacked)    | Minutes by repo, colored by workflow type |
+| Language distribution | `doughnut`         | Repos per language                        |
+| Drift breakdown       | `bar`              | Drifted repos by severity                 |
 
 ---
 
@@ -446,27 +449,27 @@ PR merged → apply-repository-config.yml triggers
 
 ## 11. Error Handling
 
-| Layer | Strategy |
-|---|---|
-| GitHub API | Exponential backoff, circuit breaker for rate limits; errors surface in dashboard + logs |
-| Onboarding | Validation errors → comment on issue with fix instructions; never fail silently |
-| Profile apply | Conflict detection → PR marks files as "CONFLICT — manual review needed" |
-| Webhooks | Verify signature → process → retry with backoff; poison messages logged + alerted |
-| Dashboard | Graceful degradation — show cached data with "last updated" timestamp if GitHub API is down |
+| Layer         | Strategy                                                                                    |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| GitHub API    | Exponential backoff, circuit breaker for rate limits; errors surface in dashboard + logs    |
+| Onboarding    | Validation errors → comment on issue with fix instructions; never fail silently             |
+| Profile apply | Conflict detection → PR marks files as "CONFLICT — manual review needed"                    |
+| Webhooks      | Verify signature → process → retry with backoff; poison messages logged + alerted           |
+| Dashboard     | Graceful degradation — show cached data with "last updated" timestamp if GitHub API is down |
 
 ---
 
 ## 12. Testing Strategy
 
-| What | Tool | Target |
-|---|---|---|
-| NestJS services | Jest + Supertest | Unit + integration, >80% coverage |
-| Profile merge logic | Jest unit tests | Every profile combination |
-| Dashboard API | Jest + Supertest | Every endpoint with mocked MongoDB |
-| Frontend components | Vitest + Testing Library | Key pages + chart rendering |
-| Webhook handler | Jest + Octokit test helpers | Every event type |
-| Workflows | `act` or manual | Smoke test per workflow |
-| E2E | Playwright (later) | Happy path: issue → onboard → apply |
+| What                | Tool                        | Target                              |
+| ------------------- | --------------------------- | ----------------------------------- |
+| NestJS services     | Jest + Supertest            | Unit + integration, >80% coverage   |
+| Profile merge logic | Jest unit tests             | Every profile combination           |
+| Dashboard API       | Jest + Supertest            | Every endpoint with mocked MongoDB  |
+| Frontend components | Vitest + Testing Library    | Key pages + chart rendering         |
+| Webhook handler     | Jest + Octokit test helpers | Every event type                    |
+| Workflows           | `act` or manual             | Smoke test per workflow             |
+| E2E                 | Playwright (later)          | Happy path: issue → onboard → apply |
 
 ---
 
