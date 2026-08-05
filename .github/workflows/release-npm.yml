@@ -75,7 +75,8 @@ jobs:
             flags="--tag ${{ inputs.npm-tag }}"
           fi
           npm version ${{ inputs.version }} --no-git-tag-version
-          npm publish --provenance $flags  # shellcheck disable=SC2086
+          # shellcheck disable=SC2086
+          npm publish --provenance $flags
         working-directory: '${{ inputs.working-directory }}'
         env:
           NODE_AUTH_TOKEN: '${{ secrets.NPM_TOKEN }}'

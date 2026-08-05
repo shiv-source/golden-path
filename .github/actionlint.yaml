@@ -1,8 +1,4 @@
-self-hosted-runner:
-  labels: []
-
-config-variables: []
-
-permissions:
-  contents: write
-  pull-requests: write
+paths:
+  .github/workflows/release-github-npm.yml:
+    ignore:
+      - 'property ".+" is not defined in object type'
