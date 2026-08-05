@@ -1,0 +1,69 @@
+name: 'Release (GitHub)'
+
+on:
+  workflow_call:
+    inputs:
+      tag-prefix:
+        description: 'Tag prefix (e.g., "v")'
+        type: string
+        default: 'v'
+      draft:
+        description: 'Create as draft release'
+        type: boolean
+        default: false
+      prerelease:
+        description: 'Mark as prerelease'
+        type: boolean
+        default: false
+      generate-release-notes:
+        description: 'Auto-generate release notes from commits'
+        type: boolean
+        default: true
+      target-branch:
+        description: 'Branch to release from'
+        type: string
+        default: 'main'
+      extra-files:
+        description: 'Newline-separated list of files to attach to release'
+        type: string
+        default: ''
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine next version
+        id: release-please
+        uses: googleapis/release-please-action@v4
+        with:
+          target-branch: '${{ inputs.target-branch }}'
+          release-type: simple
+
+      - name: Create GitHub Release
+        if: steps.release-please.outputs.release_created
+        env:
+          GH_TOKEN: '${{ github.token }}'
+          TAG: '${{ steps.release-please.outputs.tag_name }}'
+        run: |
+          flags=""
+          ${{ inputs.draft }} && flags="$flags --draft"
+          ${{ inputs.prerelease }} && flags="$flags --prerelease"
+          ${{ inputs.generate-release-notes }} && flags="$flags --generate-notes"
+
+          gh release create "$TAG" \
+            --title "$TAG" \
+            $flags
+
+          if [ -n "${{ inputs.extra-files }}" ]; then
+            echo "${{ inputs.extra-files }}" | while IFS= read -r file; do
+              [ -f "$file" ] && gh release upload "$TAG" "$file"
+            done
+          fi
