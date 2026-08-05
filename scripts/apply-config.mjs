@@ -32,10 +32,10 @@ export function applyConfig({ workspace, repoName, targetRepo, org }) {
   const targetDir = join(workspace, 'target-repo');
   execSync(`gh repo clone ${targetRepo} ${targetDir}`, { stdio: 'inherit' });
 
-  // Write merged files with token substitution
+  // Substitute org-specific values when applying to a different org
   const tokens = {
-    '{{ORG}}': org,
-    '{{ORG_DOMAIN}}': `${org}.com`,
+    'shiv-source': org,
+    'shiv-source.com': `${org}.com`,
   };
 
   for (const f of merged.files) {

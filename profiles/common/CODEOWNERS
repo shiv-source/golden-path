@@ -1,3 +1,2 @@
 # Default codeowners — update with your team handle
-# Default codeowners — set during onboarding from GITHUB_REPOSITORY_OWNER
-* @{{ORG}}
+* @shiv-source

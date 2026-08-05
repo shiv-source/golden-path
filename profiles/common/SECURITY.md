@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-Please report security vulnerabilities to **security@{{ORG_DOMAIN}}**.
+Please report security vulnerabilities to **security@shiv-source.com**.
 Do not open public issues for security concerns.
 
 ## Supported Versions
