@@ -44,6 +44,7 @@ jobs:
       tag_name: '${{ steps.release-please.outputs.tag_name }}'
       version: '${{ steps.release-please.outputs.major }}.${{ steps.release-please.outputs.minor }}.${{ steps.release-please.outputs.patch }}'
       release_created: '${{ steps.release-please.outputs.release_created }}'
+      isReleased: '${{ steps.release-please.outputs.release_created }}'
       release_type: '${{ steps.release-type.outputs.type }}'
       major: '${{ steps.release-please.outputs.major }}'
       minor: '${{ steps.release-please.outputs.minor }}'
@@ -103,7 +104,6 @@ jobs:
         env:
           GH_TOKEN: '${{ github.token }}'
           TAG: '${{ steps.release-please.outputs.tag_name }}'
-          NOTES_FILE: '${{ steps.release-type.outputs.notes_file }}'
         run: |
           NOTES_FILE="${{ steps.notes.outputs.notes_file }}"
 
@@ -111,12 +111,9 @@ jobs:
 
           ${{ inputs.draft }} && set -- "$@" --draft
           ${{ inputs.prerelease }} && set -- "$@" --prerelease
-
+          ${{ inputs.generate-release-notes }} && set -- "$@" --generate-notes
           if [ -s "$NOTES_FILE" ]; then
-            ${{ inputs.generate-release-notes }} && set -- "$@" --generate-notes
             set -- "$@" --notes-file "$NOTES_FILE"
-          else
-            ${{ inputs.generate-release-notes }} && set -- "$@" --generate-notes
           fi
 
           gh release create "$@"
