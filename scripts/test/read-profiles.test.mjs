@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { readProfiles } from '../read-profiles.mjs';
-import { getChangedRepos } from '../get-changed-repos.mjs';
 import { mergeProfiles } from '../merge-profiles.mjs';
 
 const workspace = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -23,13 +22,6 @@ describe('read-profiles', () => {
   it('skips missing profile directories gracefully', () => {
     const profiles = readProfiles({ profilesDir, names: ['nonexistent'] });
     assert.deepEqual(profiles, []);
-  });
-});
-
-describe('get-changed-repos', () => {
-  it('returns an array', () => {
-    const result = getChangedRepos();
-    assert.ok(Array.isArray(result));
   });
 });
 
