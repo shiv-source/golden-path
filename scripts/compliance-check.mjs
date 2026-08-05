@@ -1,5 +1,7 @@
 // Verify that required files exist and branch protection is enabled on a repo.
 
+import { ghSh } from './lib/gh.mjs';
+
 /**
  * Check compliance for a repository.
  * @param {object} opts
@@ -45,14 +47,4 @@ export async function complianceCheck(opts) {
     branchProtected,
     errors,
   };
-}
-
-/** @param {string} cmd */
-async function ghSh(cmd) {
-  const { execSync } = await import('node:child_process');
-  try {
-    return execSync(`gh ${cmd}`, { encoding: 'utf-8' }).trim();
-  } catch {
-    return '';
-  }
 }

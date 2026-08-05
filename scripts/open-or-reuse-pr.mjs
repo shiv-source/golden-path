@@ -1,6 +1,8 @@
 // Open a PR or reuse an existing one (idempotent).
 // Uses the GitHub CLI (`gh`) which must be available in the environment.
 
+import { ghSh } from './lib/gh.mjs';
+
 /**
  * @param {object} opts
  * @param {string} opts.repo — target repository (owner/name)
@@ -28,19 +30,4 @@ export async function openOrReusePR(opts) {
   );
   console.log(`PR created: ${url}`);
   return { url, reused: false };
-}
-
-/**
- * Execute a gh CLI command and return stdout (trimmed).
- * @param {string} cmd
- * @returns {Promise<string>}
- */
-async function ghSh(cmd) {
-  const { execSync } = await import('node:child_process');
-  try {
-    return execSync(`gh ${cmd}`, { encoding: 'utf-8' }).trim();
-  } catch {
-    // No output or error — return empty string
-    return '';
-  }
 }

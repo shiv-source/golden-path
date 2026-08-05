@@ -1,46 +1,65 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
-import { readProfiles } from '../read-profiles.mjs';
-import { getChangedRepos } from '../get-changed-repos.mjs';
-import { mergeProfiles } from '../merge-profiles.mjs';
+import { execSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { configureGit, commitAndPush } from '../git-commit-push.mjs';
 
-const workspace = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const profilesDir = resolve(workspace, 'profiles');
-
-describe('read-profiles', () => {
-  it('reads profiles from the filesystem', () => {
-    const profiles = readProfiles({ profilesDir, names: ['common'] });
-    assert.ok(profiles.length >= 1);
-    const common = profiles.find((p) => p.name === 'common');
-    assert.ok(common);
-    assert.ok(common.files.length > 0);
-    // Should contain .editorconfig
-    assert.ok(common.files.some((f) => f.path === '.editorconfig'));
+describe('git-commit-push', () => {
+  describe('configureGit', () => {
+    it('exports a function', () => {
+      assert.equal(typeof configureGit, 'function');
+    });
   });
 
-  it('skips missing profile directories gracefully', () => {
-    const profiles = readProfiles({ profilesDir, names: ['nonexistent'] });
-    assert.deepEqual(profiles, []);
-  });
-});
+  describe('commitAndPush', () => {
+    it('skips when there are no new changes', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'gp-test-'));
+      try {
+        execSync('git init', { cwd: dir });
+        execSync('git config user.email "test@test.com"', { cwd: dir });
+        execSync('git config user.name "Test"', { cwd: dir });
+        writeFileSync(join(dir, 'README.md'), '# test');
+        execSync('git add -A', { cwd: dir });
+        execSync('git commit -m "init"', { cwd: dir });
 
-describe('get-changed-repos', () => {
-  it('returns an array', () => {
-    const result = getChangedRepos();
-    assert.ok(Array.isArray(result));
-  });
-});
+        const result = commitAndPush({
+          branch: 'feature/test',
+          cwd: dir,
+          message: 'test commit',
+        });
 
-describe('profile integration', () => {
-  it('readProfiles + mergeProfiles produces valid merged file tree', () => {
-    const profiles = readProfiles({ profilesDir, names: ['common', 'node-library'] });
-    assert.ok(profiles.length === 2);
+        assert.equal(result.skipped, true);
+        assert.equal(result.pushed, false);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
 
-    const { files } = mergeProfiles(profiles);
-    assert.ok(files.length > 0);
-    assert.ok(files.some((f) => f.path === '.prettierrc'));
-    assert.ok(files.some((f) => f.path === 'CODEOWNERS'));
+    it('commits when there are new changes (push fails without remote)', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'gp-test-'));
+      try {
+        execSync('git init', { cwd: dir });
+        execSync('git config user.email "test@test.com"', { cwd: dir });
+        execSync('git config user.name "Test"', { cwd: dir });
+        writeFileSync(join(dir, 'README.md'), '# test');
+        execSync('git add -A', { cwd: dir });
+        execSync('git commit -m "init"', { cwd: dir });
+
+        writeFileSync(join(dir, 'new-file.txt'), 'content');
+
+        const result = commitAndPush({
+          branch: 'feature/test-2',
+          cwd: dir,
+          message: 'test commit',
+        });
+
+        assert.equal(result.skipped, false);
+        // push fails in test (no origin remote) but commit succeeded
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
   });
 });
