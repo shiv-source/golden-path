@@ -15,6 +15,10 @@ on:
         description: 'Mark as prerelease'
         type: boolean
         default: false
+      tag:
+        description: 'Explicit tag to release (skips release-please). Use for tag-driven releases.'
+        type: string
+        default: ''
       generate-release-notes:
         description: 'Auto-generate release notes from commits'
         type: boolean
@@ -45,15 +49,15 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     outputs:
-      tag_name: '${{ steps.release-please.outputs.tag_name }}'
-      version: '${{ steps.release-please.outputs.major }}.${{ steps.release-please.outputs.minor }}.${{ steps.release-please.outputs.patch }}'
-      release_created: '${{ steps.release-please.outputs.release_created }}'
-      isReleased: '${{ steps.release-please.outputs.release_created }}'
-      release_type: '${{ steps.release-type.outputs.type }}'
-      is_prerelease: "${{ inputs.prerelease-branch != ' && inputs.target-branch == inputs.prerelease-branch }}"
-      major: '${{ steps.release-please.outputs.major }}'
-      minor: '${{ steps.release-please.outputs.minor }}'
-      patch: '${{ steps.release-please.outputs.patch }}'
+      tag_name: '${{ steps.release-please.outputs.tag_name || steps.tag-info.outputs.tag_name }}'
+      version: '${{ steps.release-please.outputs.major || steps.tag-info.outputs.major }}.${{ steps.release-please.outputs.minor || steps.tag-info.outputs.minor }}.${{ steps.release-please.outputs.patch || steps.tag-info.outputs.patch }}'
+      release_created: '${{ steps.release-please.outputs.release_created || steps.tag-info.outputs.release_created }}'
+      isReleased: '${{ steps.release-please.outputs.release_created || steps.tag-info.outputs.release_created }}'
+      release_type: "${{ steps.release-type.outputs.type || ' }}"
+      is_prerelease: "${{ inputs.prerelease-branch != '' && inputs.target-branch == inputs.prerelease-branch }}"
+      major: '${{ steps.release-please.outputs.major || steps.tag-info.outputs.major }}'
+      minor: '${{ steps.release-please.outputs.minor || steps.tag-info.outputs.minor }}'
+      patch: '${{ steps.release-please.outputs.patch || steps.tag-info.outputs.patch }}'
     permissions:
       contents: write
       pull-requests: write
@@ -64,15 +68,29 @@ jobs:
 
       - name: Determine next version
         id: release-please
+        if: inputs.tag == ''
         uses: googleapis/release-please-action@v4
         with:
           target-branch: '${{ inputs.target-branch }}'
           release-type: simple
           prerelease: ${{ inputs.prerelease-branch != '' && inputs.target-branch == inputs.prerelease-branch }}
 
+      - name: Set tag outputs
+        id: tag-info
+        if: inputs.tag != ''
+        run: |
+          TAG="${{ inputs.tag }}"
+          echo "tag_name=$TAG" >> "$GITHUB_OUTPUT"
+          echo "release_created=true" >> "$GITHUB_OUTPUT"
+          VERSION=$(echo "$TAG" | sed 's/^v//' | sed 's/-.*//')
+          IFS='.' read -r major minor patch <<< "$VERSION"
+          echo "major=$major" >> "$GITHUB_OUTPUT"
+          echo "minor=$minor" >> "$GITHUB_OUTPUT"
+          echo "patch=$patch" >> "$GITHUB_OUTPUT"
+
       - name: Determine release type
         id: release-type
-        if: steps.release-please.outputs.release_created
+        if: steps.release-please.outputs.release_created && inputs.tag == ''
         run: |
           prefix="${{ inputs.tag-prefix }}"
           prev=$(git tag --list "${prefix}*" --sort=-version:refname | sed -n 2p | sed "s/^${prefix}//")
@@ -109,8 +127,9 @@ jobs:
         if: steps.release-please.outputs.release_created
         env:
           GH_TOKEN: '${{ github.token }}'
-          TAG: '${{ steps.release-please.outputs.tag_name }}'
+          TAG: '${{ inputs.tag || steps.release-please.outputs.tag_name }}'
           IS_RC: "${{ inputs.prerelease-branch != ' && inputs.target-branch == inputs.prerelease-branch }}"
+          IS_TAG: "${{ inputs.tag != ' }}"
         run: |
           NOTES_FILE="${{ steps.notes.outputs.notes_file }}"
 
@@ -119,6 +138,9 @@ jobs:
           ${{ inputs.draft }} && set -- "$@" --draft
           if [ "$IS_RC" = "true" ] || ${{ inputs.prerelease }}; then
             set -- "$@" --prerelease
+          fi
+          if [ "$IS_TAG" = "true" ]; then
+            case "$TAG" in *-rc*|*-alpha*|*-beta*) set -- "$@" --prerelease ;; esac
           fi
           ${{ inputs.generate-release-notes }} && set -- "$@" --generate-notes
           if [ -s "$NOTES_FILE" ]; then
