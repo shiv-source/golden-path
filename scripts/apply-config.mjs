@@ -1,9 +1,10 @@
 // Apply profile configuration to a target repository.
 // Orchestrates: read config → resolve profiles → merge files → clone target → write files → substitute tokens.
 
-import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { execSync } from 'node:child_process';
+import { writeFile } from './lib/fs.mjs';
 import { readProfiles } from './read-profiles.mjs';
 import { mergeProfiles } from './merge-profiles.mjs';
 
@@ -43,9 +44,7 @@ export function applyConfig({ workspace, repoName, targetRepo, org }) {
     for (const [token, value] of Object.entries(tokens)) {
       content = content.replaceAll(token, value);
     }
-    const dest = join(targetDir, f.path);
-    mkdirSync(dirname(dest), { recursive: true });
-    writeFileSync(dest, content);
+    writeFile(join(targetDir, f.path), content);
   }
 
   return {
