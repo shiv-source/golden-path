@@ -34,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag_name: '${{ steps.release-please.outputs.tag_name }}'
+      version: '${{ steps.release-please.outputs.major }}.${{ steps.release-please.outputs.minor }}.${{ steps.release-please.outputs.patch }}'
       release_created: '${{ steps.release-please.outputs.release_created }}'
       major: '${{ steps.release-please.outputs.major }}'
       minor: '${{ steps.release-please.outputs.minor }}'
