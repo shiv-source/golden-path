@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       repo:
-        description: 'Repository to apply config to (full name, e.g. org/repo)'
+        description: 'Repository to apply config to (e.g. org/repo)'
         type: string
         required: true
 
@@ -25,170 +25,120 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get changed config files
+      - name: Detect changed repos
         id: changed
         if: github.event_name == 'push'
         uses: actions/github-script@v7
         with:
           script: |
-            const { execSync } = require('node:child_process');
-            const changed = execSync(
-              'git diff --name-only HEAD~1 HEAD -- repositories/'
-            ).toString().trim().split('\n').filter(Boolean);
-            const repos = changed.map(f =>
-              require('node:path').basename(f, '.yaml')
+            const { getChangedRepos } = await import(
+              '${{ github.workspace }}/scripts/get-changed-repos.mjs'
             );
-            core.setOutput('repos', JSON.stringify(repos));
+            core.setOutput('repos', JSON.stringify(getChangedRepos()));
 
-      - name: Read repo config and resolve profiles
+      - name: Read config and resolve profiles
         id: resolve
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('node:fs');
-            const path = require('node:path');
-            const configPath = path.join(
-              process.env.GITHUB_WORKSPACE, 'repositories', '${{ matrix.repo }}.yaml'
+            const { readProfiles } = await import(
+              '${{ github.workspace }}/scripts/read-profiles.mjs'
             );
-            const config = fs.readFileSync(configPath, 'utf-8');
-            core.setOutput('config', config);
-            core.info(`Config: ${config}`);
-
-      - name: Merge profiles and copy files
-        id: merge
-        uses: actions/github-script@v7
-        with:
-          script: |
             const { mergeProfiles } = await import(
               '${{ github.workspace }}/scripts/merge-profiles.mjs'
-            );
-            const { resolveProfilesFor } = await import(
-              '${{ github.workspace }}/scripts/lib/profile-map.mjs'
             );
             const fs = require('node:fs');
             const path = require('node:path');
             const { execSync } = require('node:child_process');
 
-            const repoName = '${{ matrix.repo }}'.split('/').pop();
-            const workspace = process.env.GITHUB_WORKSPACE;
-            const profilesDir = path.join(workspace, 'profiles');
-            const targetDir = path.join(workspace, 'target-repo');
+            const ws = process.env.GITHUB_WORKSPACE;
+            const repoName = '${{ matrix.repo }}'.includes('/')
+              ? '${{ matrix.repo }}'.split('/').pop()
+              : '${{ matrix.repo }}';
 
-            // Clone target repo
-            const repoFull = '${{ github.repository_owner }}/${{ matrix.repo }}'.includes('/')
-              ? '${{ matrix.repo }}'
-              : '${{ github.repository_owner }}/${{ matrix.repo }}';
-            execSync(`gh repo clone ${repoFull} ${targetDir}`, { stdio: 'inherit' });
-
-            // Determine profiles from the config filename pattern
-            // Parse the config to extract language/type, then resolve profiles
+            // Read config YAML to extract profile names
             const configYaml = fs.readFileSync(
-              path.join(workspace, 'repositories', `${{ matrix.repo }}.yaml`), 'utf-8'
+              path.join(ws, 'repositories', `${repoName}.yaml`), 'utf-8'
             );
-
-            // Extract profile names listed in the config
             const profileNames = [];
             for (const line of configYaml.split('\n')) {
-              const match = line.match(/^\s+-\s+(\S+)/);
-              if (match) profileNames.push(match[1]);
+              const m = line.match(/^\s+-\s+(\S+)/);
+              if (m) profileNames.push(m[1]);
+            }
+            core.setOutput('profiles', JSON.stringify(profileNames));
+
+            // Read profiles from filesystem + merge
+            const profiles = readProfiles({ profilesDir: path.join(ws, 'profiles'), names: profileNames });
+            const merged = mergeProfiles(profiles);
+
+            // Clone target repo and write merged files
+            const targetRepo = '${{ matrix.repo }}'.includes('/')
+              ? '${{ matrix.repo }}'
+              : '${{ github.repository_owner }}/${{ matrix.repo }}';
+            const targetDir = path.join(ws, 'target-repo');
+            execSync(`gh repo clone ${targetRepo} ${targetDir}`, { stdio: 'inherit' });
+
+            for (const f of merged.files) {
+              const dest = path.join(targetDir, f.path);
+              fs.mkdirSync(path.dirname(dest), { recursive: true });
+              fs.writeFileSync(dest, f.content);
             }
 
-            // Build profile objects from filesystem
-            const profiles = [];
-            for (const name of profileNames) {
-              const profilePath = path.join(profilesDir, name);
-              if (!fs.existsSync(profilePath)) {
-                core.warning(`Profile directory not found: ${profilePath}`);
-                continue;
-              }
-              const files = [];
-              const walkDir = (dir, base) => {
-                for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-                  const fullPath = path.join(dir, entry.name);
-                  const relPath = path.relative(base, fullPath);
-                  if (entry.isDirectory()) {
-                    walkDir(fullPath, base);
-                  } else {
-                    files.push({
-                      path: relPath,
-                      content: fs.readFileSync(fullPath, 'utf-8'),
-                    });
-                  }
-                }
-              };
-              walkDir(profilePath, profilePath);
-              profiles.push({ name, files });
-            }
-
-            // Merge profiles with conflict detection
-            const { files, conflicts } = mergeProfiles(profiles);
-
-            // Write merged files to target repo
-            for (const file of files) {
-              const destPath = path.join(targetDir, file.path);
-              fs.mkdirSync(path.dirname(destPath), { recursive: true });
-              fs.writeFileSync(destPath, file.content);
-            }
-
-            core.setOutput('filesCopied', String(files.length));
-            core.setOutput('conflictsFound', String(conflicts.length > 0));
+            core.setOutput('filesCopied', String(merged.files.length));
+            core.setOutput('conflictsFound', String(merged.conflicts.length > 0));
             core.setOutput(
               'conflictsList',
-              conflicts.map(c => `- \`${c.path}\`: ${c.message}`).join('\n')
+              merged.conflicts.map((c) => `- \`${c.path}\`: ${c.message}`).join('\n'),
             );
 
-      - name: Create PR in target repository
+      - name: Create PR in target repo
         id: pr
         uses: actions/github-script@v7
         with:
           script: |
+            const { configureGit, commitAndPush } = await import(
+              '${{ github.workspace }}/scripts/git-commit-push.mjs'
+            );
             const { openOrReusePR } = await import(
               '${{ github.workspace }}/scripts/open-or-reuse-pr.mjs'
             );
-            const { execSync } = require('node:child_process');
             const path = require('node:path');
 
             const targetDir = path.join(process.env.GITHUB_WORKSPACE, 'target-repo');
             const branch = 'feature/apply-org-config';
-            const repo = '${{ github.repository_owner }}/${{ matrix.repo }}'.includes('/')
+            const repo = '${{ matrix.repo }}'.includes('/')
               ? '${{ matrix.repo }}'
               : '${{ github.repository_owner }}/${{ matrix.repo }}';
 
-            // Configure git and create branch
-            execSync('git config user.name "github-actions[bot]"');
-            execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
-            execSync(`git checkout -b ${branch}`, { cwd: targetDir });
-            execSync('git add -A', { cwd: targetDir });
-            try {
-              execSync('git commit -m "chore: apply organization standard configuration"', { cwd: targetDir });
-            } catch {
-              core.info('No changes to commit — skipping PR.');
+            configureGit();
+            const { skipped } = commitAndPush({
+              branch,
+              cwd: targetDir,
+              message: 'chore: apply organization standard configuration',
+            });
+            if (skipped) {
+              core.info('No changes — skipping PR.');
               return;
             }
-            execSync(`git push origin ${branch} --force`, { cwd: targetDir });
 
-            const conflictsSection = '${{ steps.merge.outputs.conflictsFound }}' === 'true'
-              ? '\n### ⚠️ Conflicts Detected\n\nThe following files have different content and require manual review:\n\n${{ steps.merge.outputs.conflictsList }}\n'
+            const conflicts = '${{ steps.resolve.outputs.conflictsFound }}' === 'true'
+              ? '\n### ⚠️ Conflicts Detected\n\n${{ steps.resolve.outputs.conflictsList }}\n'
               : '';
-
-            const body = [
-              '## Apply Organization Standard Configuration',
-              '',
-              'This PR applies standardized configuration files from [golden-path](https://github.com/${{ github.repository }}).',
-              '',
-              '**Repository:** `${{ matrix.repo }}`',
-              '**Files copied:** ${{ steps.merge.outputs.filesCopied }}',
-              conflictsSection,
-              '> This PR was automatically generated. Please review the changes carefully.',
-            ].filter(Boolean).join('\n');
 
             const result = await openOrReusePR({
               repo,
               baseBranch: 'main',
               headBranch: branch,
               title: 'Apply organization standard configuration',
-              body,
+              body: [
+                '## Apply Organization Standard Configuration',
+                '',
+                'This PR applies standardized configuration from [golden-path](https://github.com/${{ github.repository }}).',
+                '',
+                '**Repository:** `${{ matrix.repo }}`',
+                '**Files copied:** ${{ steps.resolve.outputs.filesCopied }}',
+                conflicts,
+                '> Automatically generated. Please review carefully.',
+              ].filter(Boolean).join('\n'),
             });
-
             core.setOutput('prUrl', result.url);
-            core.setOutput('reused', String(result.reused));

@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Parse issue form
+      - name: Parse issue
         id: parse
         uses: actions/github-script@v7
         with:
@@ -25,31 +25,26 @@ jobs:
             const { parseOnboardingIssue } = await import(
               '${{ github.workspace }}/scripts/parse-onboarding-issue.mjs'
             );
-            const body = context.payload.issue.body;
-            const request = parseOnboardingIssue(body);
-            core.setOutput('repoName', request.repoName);
-            core.setOutput('type', request.type);
-            core.setOutput('language', request.language);
-            core.setOutput('options', JSON.stringify(request.options));
-            if (!request.repoName) {
-              core.setFailed('Could not parse repository name from issue body.');
-            }
+            const r = parseOnboardingIssue(context.payload.issue.body);
+            core.setOutput('repoName', r.repoName);
+            core.setOutput('type', r.type);
+            core.setOutput('language', r.language);
+            core.setOutput('options', JSON.stringify(r.options));
+            if (!r.repoName) core.setFailed('Could not parse repository name.');
 
-      - name: Validate repository exists
+      - name: Validate repo exists
         env:
           GH_TOKEN: '${{ github.token }}'
         run: |
           repo="${{ github.repository_owner }}/${{ steps.parse.outputs.repoName }}"
-          if gh repo view "$repo" --json name > /dev/null 2>&1; then
-            echo "Repository $repo exists."
-          else
-            echo "::error::Repository $repo does not exist in this organization."
+          if ! gh repo view "$repo" --json name > /dev/null 2>&1; then
+            echo "::error::Repository $repo does not exist."
             gh issue comment "${{ github.event.issue.html_url }}" \
-              --body "❌ **Validation failed**: Repository \`${{ steps.parse.outputs.repoName }}\` does not exist in this organization. Please create it first."
+              --body "❌ Repository \`${{ steps.parse.outputs.repoName }}\` does not exist. Create it first."
             exit 1
           fi
 
-      - name: Generate repository config
+      - name: Generate config
         id: config
         uses: actions/github-script@v7
         with:
@@ -57,48 +52,38 @@ jobs:
             const { generateRepoConfig } = await import(
               '${{ github.workspace }}/scripts/generate-repo-config.mjs'
             );
-            const request = {
+            const { resolveProfilesFor } = await import(
+              '${{ github.workspace }}/scripts/lib/profile-map.mjs'
+            );
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const r = {
               repoName: '${{ steps.parse.outputs.repoName }}',
               type: '${{ steps.parse.outputs.type }}',
               language: '${{ steps.parse.outputs.language }}',
               options: JSON.parse('${{ steps.parse.outputs.options }}'),
             };
-            const yaml = generateRepoConfig(request);
-            const fs = require('node:fs');
-            const path = require('node:path');
+            const yaml = generateRepoConfig(r);
             const dir = path.join(process.env.GITHUB_WORKSPACE, 'repositories');
             fs.mkdirSync(dir, { recursive: true });
-            fs.writeFileSync(path.join(dir, `${request.repoName}.yaml`), yaml);
-            core.setOutput('profiles', JSON.stringify(
-              (await import('${{ github.workspace }}/scripts/lib/profile-map.mjs'))
-                .resolveProfilesFor(request.language, request.type)
-            ));
+            fs.writeFileSync(path.join(dir, `${r.repoName}.yaml`), yaml);
+            core.setOutput('profiles', JSON.stringify(resolveProfilesFor(r.language, r.type)));
 
-      - name: Create branch and PR
+      - name: Create PR
         id: pr
         uses: actions/github-script@v7
         with:
           script: |
+            const { configureGit, commitAndPush } = await import(
+              '${{ github.workspace }}/scripts/git-commit-push.mjs'
+            );
             const { openOrReusePR } = await import(
               '${{ github.workspace }}/scripts/open-or-reuse-pr.mjs'
             );
-            const { execSync } = require('node:child_process');
-
-            execSync('git config user.name "github-actions[bot]"');
-            execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
-
+            configureGit();
             const branch = 'feature/onboard-${{ steps.parse.outputs.repoName }}';
-            execSync(`git checkout -b ${branch}`);
-            execSync('git add repositories/');
-            try {
-              execSync('git commit -m "chore: onboard ${{ steps.parse.outputs.repoName }}"');
-            } catch {
-              core.info('No changes to commit');
-            }
-            execSync(`git push origin ${branch} --force`);
-
+            commitAndPush({ branch, message: 'chore: onboard ${{ steps.parse.outputs.repoName }}', files: 'repositories/' });
             const profiles = JSON.parse('${{ steps.config.outputs.profiles }}').join(', ');
-
             const result = await openOrReusePR({
               repo: '${{ github.repository }}',
               baseBranch: 'main',
@@ -114,19 +99,15 @@ jobs:
                 '',
                 'Generated `repositories/${{ steps.parse.outputs.repoName }}.yaml`.',
                 '',
-                'Once merged, `apply-repository-config.yml` will create a PR in the target repository to apply the standard configuration files.',
+                'Once merged, `apply-repository-config.yml` will apply the standard configuration.',
               ].join('\n'),
             });
-
             core.setOutput('prUrl', result.url);
-            core.setOutput('reused', String(result.reused));
 
       - name: Comment on issue
-        if: steps.pr.outputs.pr_url != ''
+        if: steps.pr.outputs.prUrl != ''
         env:
           GH_TOKEN: '${{ github.token }}'
         run: |
           gh issue comment "${{ github.event.issue.html_url }}" \
-            --body "✅ **Onboarding PR created**: ${{ steps.pr.outputs.pr_url }}
-
-          This PR adds the repository configuration for \`${{ steps.parse.outputs.repoName }}\`. Once merged, the standard configuration files will be applied to the target repository."
+            --body "✅ **Onboarding PR**: ${{ steps.pr.outputs.prUrl }}"
