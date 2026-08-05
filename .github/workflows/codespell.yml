@@ -4,9 +4,9 @@ on:
   workflow_call:
     inputs:
       version:
-        description: 'Codespell version'
+        description: 'Codespell version (pip installable)'
         type: string
-        default: 'v2.4.3'
+        default: '2.4.3'
       path:
         description: 'Path to check (defaults to entire repo)'
         type: string
@@ -31,11 +31,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run codespell
-        uses: codespell-project/actions-codespell@v2
+      - uses: actions/setup-python@v5
         with:
-          version: '${{ inputs.version }}'
-          path: '${{ inputs.path }}'
-          ignore_words_file: '${{ inputs.ignore-words-file }}'
-          skip: '${{ inputs.skip }}'
-          args: '${{ inputs.args }}'
+          python-version: '3.12'
+
+      - name: Install codespell
+        run: pip install codespell==${{ inputs.version }}
+
+      - name: Run codespell
+        run: |
+          codespell \
+            ${{ inputs.path }} \
+            ${{ inputs.ignore-words-file && format('--ignore-words {0}', inputs.ignore-words-file) || '' }} \
+            --skip '${{ inputs.skip }}' \
+            ${{ inputs.args }}
