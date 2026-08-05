@@ -19,6 +19,10 @@ on:
         description: 'Auto-generate release notes from commits'
         type: boolean
         default: true
+      prerelease-branch:
+        description: 'Branch name for RC releases (e.g. "next"). Produces v1.0.0-rc.1 style tags'
+        type: string
+        default: ''
       target-branch:
         description: 'Branch to release from'
         type: string
@@ -46,6 +50,7 @@ jobs:
       release_created: '${{ steps.release-please.outputs.release_created }}'
       isReleased: '${{ steps.release-please.outputs.release_created }}'
       release_type: '${{ steps.release-type.outputs.type }}'
+      is_prerelease: "${{ inputs.prerelease-branch != ' && inputs.target-branch == inputs.prerelease-branch }}"
       major: '${{ steps.release-please.outputs.major }}'
       minor: '${{ steps.release-please.outputs.minor }}'
       patch: '${{ steps.release-please.outputs.patch }}'
@@ -63,6 +68,7 @@ jobs:
         with:
           target-branch: '${{ inputs.target-branch }}'
           release-type: simple
+          prerelease: ${{ inputs.prerelease-branch != '' && inputs.target-branch == inputs.prerelease-branch }}
 
       - name: Determine release type
         id: release-type
@@ -104,13 +110,16 @@ jobs:
         env:
           GH_TOKEN: '${{ github.token }}'
           TAG: '${{ steps.release-please.outputs.tag_name }}'
+          IS_RC: "${{ inputs.prerelease-branch != ' && inputs.target-branch == inputs.prerelease-branch }}"
         run: |
           NOTES_FILE="${{ steps.notes.outputs.notes_file }}"
 
           set -- "$TAG" --title "$TAG"
 
           ${{ inputs.draft }} && set -- "$@" --draft
-          ${{ inputs.prerelease }} && set -- "$@" --prerelease
+          if [ "$IS_RC" = "true" ] || ${{ inputs.prerelease }}; then
+            set -- "$@" --prerelease
+          fi
           ${{ inputs.generate-release-notes }} && set -- "$@" --generate-notes
           if [ -s "$NOTES_FILE" ]; then
             set -- "$@" --notes-file "$NOTES_FILE"
