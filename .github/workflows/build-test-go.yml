@@ -1,0 +1,55 @@
+name: 'Build & Test (Go)'
+
+on:
+  workflow_call:
+    inputs:
+      go-version:
+        description: 'Go version'
+        type: string
+        default: 'stable'
+      working-directory:
+        description: 'Working directory for the Go module'
+        type: string
+        default: '.'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '${{ inputs.go-version }}'
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          working-directory: '${{ inputs.working-directory }}'
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '${{ inputs.go-version }}'
+      - name: Vet
+        run: go vet ./...
+        working-directory: '${{ inputs.working-directory }}'
+      - name: Test
+        run: go test -race -coverprofile=coverage.out ./...
+        working-directory: '${{ inputs.working-directory }}'
+
+  build:
+    name: Build
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '${{ inputs.go-version }}'
+      - name: Build
+        run: go build ./...
+        working-directory: '${{ inputs.working-directory }}'

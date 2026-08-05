@@ -1,0 +1,19 @@
+{
+  "name": "golden-path",
+  "private": true,
+  "description": "Internal developer platform — reusable workflows, profiles, and onboarding for org-wide GitHub standardization.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "eslint scripts/",
+    "lint:workflows": "actionlint .github/workflows/*.yml",
+    "test": "node --test 'scripts/test/**/*.test.mjs'",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "prettier": "^3.4.0"
+  }
+}

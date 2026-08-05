@@ -1,0 +1,24 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  ci:
+    name: CI
+    if: github.ref_type == 'tag'
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Release
+    needs: [ci]
+    if: github.ref_type == 'tag'
+    uses: ./.github/workflows/release-github.yml
+    with:
+      tag: '${{ github.ref_name }}'

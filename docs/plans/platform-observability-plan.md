@@ -6,47 +6,46 @@
 
 ## Scope
 
-Platform-observability is the **hosted web application** that provides visibility, governance, and policy enforcement for the org. It consumes `@golden-path/shared` from the sibling [`golden-path`](../../golden-path/docs/plans/golden-path-plan.md) repo.
+Platform-observability is the **hosted web application** that provides visibility, governance, and policy enforcement for the org. It defines its own types in a local `packages/shared/` workspace package shared between backend and frontend.
 
 ### What Lives Here
 
-| Layer | What |
-|---|---|
-| 3. Policy Engine | Rule evaluation, drift detection, compliance scoring, lifecycle classification |
-| 4. GitHub App Backend | Webhook receiver, event handlers, proactive enforcement |
-| 5. Dashboard | NestJS 11 backend + React 19 SPA with chart.js, service catalog, repo health/activity |
+| Layer                 | What                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| 3. Policy Engine      | Rule evaluation, drift detection, compliance scoring, lifecycle classification        |
+| 4. GitHub App Backend | Webhook receiver, event handlers, proactive enforcement                               |
+| 5. Dashboard          | NestJS 11 backend + React 19 SPA with chart.js, service catalog, repo health/activity |
 
 ### What Lives in golden-path
 
-| Layer | What |
-|---|---|
-| 1. Reusable Workflows | 10 standardized CI/CD workflows |
-| 2. Onboarding System | Issue form, onboarding + apply-config workflows, scripts |
-| Shared Types | `@golden-path/shared` — types consumed here via npm |
-| Profile Templates | File templates applied by onboarding |
+| Layer                 | What                                                                      |
+| --------------------- | ------------------------------------------------------------------------- |
+| 1. Reusable Workflows | 10 standardized CI/CD workflows                                           |
+| 2. Onboarding System  | Issue form, onboarding + apply-config workflows, scripts, profile mapping |
+| 3. Profile Templates  | File templates applied by onboarding                                      |
 
 ---
 
 ## Tech Stack
 
-| Layer | Choice | Version |
-|---|---|---|
-| Runtime | Node.js | 22.x LTS |
-| Package Manager | pnpm | 10.x |
-| Backend Framework | NestJS | 11.x |
-| Frontend | React SPA (Vite) | 19.x |
-| UI Components | shadcn/ui + Tailwind CSS | Latest |
-| Charts | chart.js + react-chartjs-2 | Latest |
-| Database | MongoDB | 7.x |
-| ORM | @nestjs/mongoose + Mongoose | Latest |
-| GitHub REST API | @octokit/rest | Latest |
-| GitHub GraphQL API | @octokit/graphql | Latest |
-| Webhooks | @octokit/webhooks | Latest |
-| Auth | @nestjs/passport + passport-github2 | Latest |
-| Cron | @nestjs/schedule | Latest |
-| Shared Types | @golden-path/shared (from golden-path repo) | `workspace:*` or npm |
-| Language | TypeScript | 5.x (strict) |
-| Monorepo | pnpm workspaces + Turborepo | Latest |
+| Layer              | Choice                                     | Version       |
+| ------------------ | ------------------------------------------ | ------------- |
+| Runtime            | Node.js                                    | 22.x LTS      |
+| Package Manager    | pnpm                                       | 10.x          |
+| Backend Framework  | NestJS                                     | 11.x          |
+| Frontend           | React SPA (Vite)                           | 19.x          |
+| UI Components      | shadcn/ui + Tailwind CSS                   | Latest        |
+| Charts             | chart.js + react-chartjs-2                 | Latest        |
+| Database           | MongoDB                                    | 7.x           |
+| ORM                | @nestjs/mongoose + Mongoose                | Latest        |
+| GitHub REST API    | @octokit/rest                              | Latest        |
+| GitHub GraphQL API | @octokit/graphql                           | Latest        |
+| Webhooks           | @octokit/webhooks                          | Latest        |
+| Auth               | @nestjs/passport + passport-github2        | Latest        |
+| Cron               | @nestjs/schedule                           | Latest        |
+| Shared Types       | Local `packages/shared/` workspace package | `workspace:*` |
+| Language           | TypeScript                                 | 5.x (strict)  |
+| Monorepo           | pnpm workspaces + Turborepo                | Latest        |
 
 ---
 
@@ -59,7 +58,20 @@ platform-observability/
 ├── tsconfig.base.json
 ├── turbo.json
 ├── docker-compose.yml              # MongoDB for local dev
-├── .npmrc                          # @golden-path:registry config
+│
+├── packages/
+│   └── shared/                     # TypeScript types shared between backend and frontend
+│       ├── src/
+│       │   ├── index.ts
+│       │   ├── repo-config.ts      # RepoConfig, RepoType, RepoLanguage, RepoOptions
+│       │   ├── profile.ts          # Profile, ProfileFile, MergeResult, Conflict
+│       │   ├── profile-map.ts      # resolveProfilesFor() — keep in sync with golden-path
+│       │   ├── dashboard.ts        # Overview, RepoSummary, Paginated<T>
+│       │   ├── webhook.ts          # WebhookEvent discriminated union
+│       │   ├── auth.ts             # User, UserRole
+│       │   └── audit.ts            # AuditLogEntry
+│       ├── tsconfig.json
+│       └── package.json
 │
 ├── apps/
 │   ├── backend/                    # NestJS 11 application
@@ -110,12 +122,6 @@ platform-observability/
 │   │   │   │   ├── repo-validator.service.ts
 │   │   │   │   ├── repo-config.store.ts
 │   │   │   │   └── repos.schema.ts
-│   │   │   ├── onboarding/
-│   │   │   │   ├── onboarding.module.ts
-│   │   │   │   ├── onboarding.controller.ts
-│   │   │   │   ├── onboarding.service.ts
-│   │   │   │   ├── issue-form.parser.ts
-│   │   │   │   └── webhook-handler.ts
 │   │   │   ├── dashboard/
 │   │   │   │   ├── dashboard.module.ts
 │   │   │   │   ├── dashboard.controller.ts
@@ -221,10 +227,13 @@ platform-observability/
 │       │   │   ├── query-keys.ts
 │       │   │   └── charts.ts
 │       │   └── types/
-│       │       └── index.ts        # re-exports from @golden-path/shared
+│       │       └── index.ts        # re-exports from packages/shared
 │       ├── index.html
 │       ├── vite.config.ts
 │       └── package.json
+│
+├── .github/
+│   └── app.yml                     # GitHub App manifest
 │
 ├── docs/
 │   └── architecture.md
@@ -252,7 +261,6 @@ AppModule
 ├── GitHubModule (global) ─── depends on: ConfigModule
 ├── ProfilesModule ────────── depends on: MongoDB, AuthModule (guards)
 ├── RepositoriesModule ────── depends on: MongoDB, GitHubModule, AuthModule
-├── OnboardingModule ──────── depends on: GitHubModule, ProfilesModule, ReposModule
 ├── DashboardModule ───────── depends on: MongoDB, RepositoriesModule
 ├── PoliciesModule ────────── depends on: MongoDB, GitHubModule, RepositoriesModule
 ├── SchedulerModule ───────── depends on: GitHubModule, DashboardModule, PoliciesModule
@@ -288,9 +296,6 @@ GET    /api/repos                     → list configured repos
 GET    /api/repos/:name               → get repo config
 POST   /api/repos/:name/apply         → trigger config application (manual dispatch)
 GET    /api/repos/:name/drift         → compare declared vs actual config
-
-# Onboarding
-POST   /api/onboarding/requests       → programmatic onboarding (admin)
 
 # Drift
 GET    /api/drift                     → all drifted repos with details
@@ -339,15 +344,15 @@ Runs as `PoliciesModule`. Evaluates rules against cached repo data + live GitHub
 
 ### Rule Set
 
-| Rule | File | Checks | Severity |
-|---|---|---|---|
-| Branch Protection | `branch-protection.rule.ts` | Requires PRs, requires reviews, no force push, requires status checks | Critical |
-| Secret Scanning | `secret-scanning.rule.ts` | GitHub secret scanning enabled + push protection on | Critical |
-| Code Scanning | `code-scanning.rule.ts` | CodeQL enabled and configured | High |
-| Required Files | `required-files.rule.ts` | CODEOWNERS, SECURITY.md, .editorconfig, dependabot.yml present | High |
-| Workflows | `workflows-configured.rule.ts` | CI workflow calling golden-path reusable workflows present | Medium |
-| Ownership | `ownership.rule.ts` | ≥2 CODEOWNERS, CODEOWNER has committed in last 90 days | High |
-| Inactivity | `inactivity.rule.ts` | Last commit <6mo (active), 6-12mo (dormant), >12mo (dead) | Info |
+| Rule              | File                           | Checks                                                                | Severity |
+| ----------------- | ------------------------------ | --------------------------------------------------------------------- | -------- |
+| Branch Protection | `branch-protection.rule.ts`    | Requires PRs, requires reviews, no force push, requires status checks | Critical |
+| Secret Scanning   | `secret-scanning.rule.ts`      | GitHub secret scanning enabled + push protection on                   | Critical |
+| Code Scanning     | `code-scanning.rule.ts`        | CodeQL enabled and configured                                         | High     |
+| Required Files    | `required-files.rule.ts`       | CODEOWNERS, SECURITY.md, .editorconfig, dependabot.yml present        | High     |
+| Workflows         | `workflows-configured.rule.ts` | CI workflow calling golden-path reusable workflows present            | Medium   |
+| Ownership         | `ownership.rule.ts`            | ≥2 CODEOWNERS, CODEOWNER has committed in last 90 days                | High     |
+| Inactivity        | `inactivity.rule.ts`           | Last commit <6mo (active), 6-12mo (dormant), >12mo (dead)             | Info     |
 
 ### Rule Interface
 
@@ -361,27 +366,28 @@ interface Rule {
 
 interface RuleResult {
   passed: boolean;
-  score: number;          // 0–100 contribution to compliance score
-  details: string;        // human-readable explanation
-  fix?: string;           // suggested remediation
+  score: number; // 0–100 contribution to compliance score
+  details: string; // human-readable explanation
+  fix?: string; // suggested remediation
 }
 ```
 
 ### Drift Detection
 
 Compares declared config (`repositories/*.yaml` + resolved profiles) against actual GitHub repo state. Produces:
+
 - **Status:** `clean` | `drifted` | `unmanaged`
 - **Details:** file-level diff (expected path + content vs actual)
 - **Age:** how long the drift has existed
 
 ### Lifecycle Classification
 
-| Status | Condition | Suggested Action |
-|---|---|---|
-| `active` | Last commit < 6 months | None |
-| `dormant` | Last commit 6–12 months | Review, consider archival |
-| `dead` | Last commit > 12 months | Archive |
-| `archiving` | Marked for archival | Monitor archival PR |
+| Status      | Condition               | Suggested Action          |
+| ----------- | ----------------------- | ------------------------- |
+| `active`    | Last commit < 6 months  | None                      |
+| `dormant`   | Last commit 6–12 months | Review, consider archival |
+| `dead`      | Last commit > 12 months | Archive                   |
+| `archiving` | Marked for archival     | Monitor archival PR       |
 
 ---
 
@@ -415,24 +421,24 @@ Org-level, all repos. Webhook URL → `POST /api/webhooks/github`.
 
 ### Pages
 
-| Route | Page | Content |
-|---|---|---|
-| `/` | Overview | StatCards (total repos, compliance%, dormant, unmanaged) + ComplianceTrendChart (line) + ActivityLeaderboard (top 10 repos) + NeedsAttentionList (dormant, missing owners, drifted, single-owner) + CIUsageChart (stacked bar) |
-| `/repos` | Repo List | FilterBar (language, status, team, profile) + RepoTable (sortable: name, status, activity bar, compliance score, risk badge) + BulkActionBar |
-| `/repos/:name` | Repo Detail | RepoHeader (name, language, type, status badge) + ActivityTimeline + ComplianceCard (score + breakdown by rule) + DriftCard (expected vs actual diff view) + ProfilesCard (applied profiles, last sync) |
-| `/drift` | Drift Report | DriftSummary (total drifted, by severity) + DriftTable (repo, file, expected, actual, age) + RemediateButton (bulk open fix PRs) |
-| `/profiles` | Profiles | Admin CRUD for profiles + dry-run preview (`POST /api/profiles/:name/preview`) |
-| `/settings` | Settings | Platform config, admin user management |
+| Route          | Page         | Content                                                                                                                                                                                                                        |
+| -------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/`            | Overview     | StatCards (total repos, compliance%, dormant, unmanaged) + ComplianceTrendChart (line) + ActivityLeaderboard (top 10 repos) + NeedsAttentionList (dormant, missing owners, drifted, single-owner) + CIUsageChart (stacked bar) |
+| `/repos`       | Repo List    | FilterBar (language, status, team, profile) + RepoTable (sortable: name, status, activity bar, compliance score, risk badge) + BulkActionBar                                                                                   |
+| `/repos/:name` | Repo Detail  | RepoHeader (name, language, type, status badge) + ActivityTimeline + ComplianceCard (score + breakdown by rule) + DriftCard (expected vs actual diff view) + ProfilesCard (applied profiles, last sync)                        |
+| `/drift`       | Drift Report | DriftSummary (total drifted, by severity) + DriftTable (repo, file, expected, actual, age) + RemediateButton (bulk open fix PRs)                                                                                               |
+| `/profiles`    | Profiles     | Admin CRUD for profiles + dry-run preview (`POST /api/profiles/:name/preview`)                                                                                                                                                 |
+| `/settings`    | Settings     | Platform config, admin user management                                                                                                                                                                                         |
 
 ### Chart.js Usage
 
-| Chart | Type | Data | Page |
-|---|---|---|---|
-| Compliance trend | `line` with fill | % compliance over 12 weeks, target line | Overview |
-| Repo activity | `bar` (horizontal) | Commits/PRs per repo, top 10 | Overview |
-| CI usage | `bar` (stacked) | Minutes by repo, colored by workflow type | Overview |
-| Language distribution | `doughnut` | Repos per language | Overview |
-| Drift breakdown | `bar` | Drifted repos by severity | Drift Report |
+| Chart                 | Type               | Data                                      | Page         |
+| --------------------- | ------------------ | ----------------------------------------- | ------------ |
+| Compliance trend      | `line` with fill   | % compliance over 12 weeks, target line   | Overview     |
+| Repo activity         | `bar` (horizontal) | Commits/PRs per repo, top 10              | Overview     |
+| CI usage              | `bar` (stacked)    | Minutes by repo, colored by workflow type | Overview     |
+| Language distribution | `doughnut`         | Repos per language                        | Overview     |
+| Drift breakdown       | `bar`              | Drifted repos by severity                 | Drift Report |
 
 ### Centralized Chart Config
 
@@ -554,26 +560,26 @@ Org-level, all repos. Webhook URL → `POST /api/webhooks/github`.
 
 ## Error Handling
 
-| Layer | Strategy |
-|---|---|
-| GitHub API | Exponential backoff, circuit breaker for rate limits; errors surface in dashboard as banners + audit logs |
-| Onboarding | Validation errors → comment on issue with specific fix instructions; never fail silently |
-| Profile Apply | Conflict detection → PR marks files as "CONFLICT — manual review needed" |
-| Webhooks | Verify signature → process → retry with backoff; poison messages logged + alerted |
-| Dashboard | Graceful degradation — show cached data with "last updated" timestamp |
+| Layer         | Strategy                                                                                                  |
+| ------------- | --------------------------------------------------------------------------------------------------------- |
+| GitHub API    | Exponential backoff, circuit breaker for rate limits; errors surface in dashboard as banners + audit logs |
+| Onboarding    | Validation errors → comment on issue with specific fix instructions; never fail silently                  |
+| Profile Apply | Conflict detection → PR marks files as "CONFLICT — manual review needed"                                  |
+| Webhooks      | Verify signature → process → retry with backoff; poison messages logged + alerted                         |
+| Dashboard     | Graceful degradation — show cached data with "last updated" timestamp                                     |
 
 ---
 
 ## Testing Strategy
 
-| What | Tool | Target |
-|---|---|---|
-| NestJS services | Jest + Supertest | Unit + integration, >80% coverage |
-| Profile merge logic | Jest unit tests | Every profile combination |
-| Dashboard API | Jest + Supertest | Every endpoint with mocked MongoDB |
-| Frontend components | Vitest + Testing Library | Key pages + chart rendering |
-| Webhook handler | Jest + Octokit test helpers | Every event type |
-| E2E | Playwright (later) | Happy path: login → dashboard → repo detail |
+| What                | Tool                        | Target                                      |
+| ------------------- | --------------------------- | ------------------------------------------- |
+| NestJS services     | Jest + Supertest            | Unit + integration, >80% coverage           |
+| Profile merge logic | Jest unit tests             | Every profile combination                   |
+| Dashboard API       | Jest + Supertest            | Every endpoint with mocked MongoDB          |
+| Frontend components | Vitest + Testing Library    | Key pages + chart rendering                 |
+| Webhook handler     | Jest + Octokit test helpers | Every event type                            |
+| E2E                 | Playwright (later)          | Happy path: login → dashboard → repo detail |
 
 ---
 
@@ -583,7 +589,7 @@ Org-level, all repos. Webhook URL → `POST /api/webhooks/github`.
 - **No dead code:** ESLint `no-unused-vars: error`, `consistent-type-imports: error`; every file wired on the commit it appears
 - **API envelope:** `{ data: ... }` via `TransformInterceptor`; consistent error shape via `HttpExceptionFilter`
 - **Validation:** Backend DTOs use `class-validator`; global `ValidationPipe({ whitelist: true, transform: true })`
-- **Types from shared:** Frontend types re-export from `@golden-path/shared` — never define domain types locally
+- **Types from shared:** Frontend types re-export from local `packages/shared/` — never define domain types locally
 - **MongoDB:** `mongoose.set('strictQuery', true)`; indexes declared in schemas
 - **pnpm 10:** `onlyBuiltDependencies` for esbuild/@swc/core; `engine-strict=true` via `.npmrc`
 
@@ -592,13 +598,23 @@ Org-level, all repos. Webhook URL → `POST /api/webhooks/github`.
 ## Implementation Phases
 
 ### Phase 1 — Scaffolding
+
 - pnpm workspace, tsconfig, turbo.json, eslint, CI
 - Root `docker-compose.yml` (MongoDB)
-- Placeholder `package.json` for apps/backend, apps/frontend
-- `.npmrc` for `@golden-path:registry`
+- Placeholder `package.json` for apps/backend, apps/frontend, packages/shared
 - **Verify:** `pnpm install` + `pnpm lint/typecheck/build` green
 
-### Phase 2 — Backend Core
+### Phase 2 — Shared Types Package
+
+- Create `packages/shared/` with all domain types
+- `profile-map.ts` — `resolveProfilesFor()` lookup table
+- Unit tests
+- **Verify:** `pnpm build` emits dist + d.ts; tests green
+
+> **Note:** The profile mapping must stay in sync with golden-path's `scripts/lib/profile-map.mjs`. Both repos maintain their own copy.
+
+### Phase 3 — Backend Core
+
 - NestJS 11 scaffold: `main.ts`, `app.module.ts`
 - MongoDB connection (MongooseModule)
 - Health check (`GET /api/health`)
@@ -607,7 +623,8 @@ Org-level, all repos. Webhook URL → `POST /api/webhooks/github`.
 - `.env.example`
 - **Verify:** `docker compose up mongo` + dev → `/api/health` returns `{ mongo: 'connected' }`
 
-### Phase 3 — Auth
+### Phase 4 — Auth
+
 - GitHub OAuth via `passport-github2`
 - Session management (`connect-mongo`)
 - Users collection + service
@@ -615,7 +632,8 @@ Org-level, all repos. Webhook URL → `POST /api/webhooks/github`.
 - Admin promotion via env list
 - **Verify:** OAuth flow → `/api/auth/me` returns user
 
-### Phase 4 — GitHub Module
+### Phase 5 — GitHub Module
+
 - Octokit wrapper (REST + GraphQL)
 - Exponential backoff + rate-limit circuit breaker
 - Webhook receiver (`POST /api/webhooks/github`)
@@ -623,26 +641,23 @@ Org-level, all repos. Webhook URL → `POST /api/webhooks/github`.
 - Event handler registry (`@nestjs/event-emitter`)
 - **Verify:** Unit tests for retry/backoff/signature
 
-### Phase 5 — Profiles Module
+### Phase 6 — Profiles Module
+
 - Profile CRUD (schema + controller)
 - Profile merge engine (inherits chain, cycle detection, conflict detection)
 - Dry-run preview endpoint
 - **Verify:** Unit tests for all merge combos; e2e with memory Mongo
 
-### Phase 6 — Repositories Module
+### Phase 7 — Repositories Module
+
 - Repo config CRUD (schema with nested subdocs)
 - Validation service
 - Config store (bridge to golden-path `repositories/*.yaml`)
-- `GET /api/repos/:name/drift` (stub, wired in P9)
+- `GET /api/repos/:name/drift` (stub, wired in P10)
 - **Verify:** e2e with seeded repos
 
-### Phase 7 — Onboarding Module
-- Issue form parser (GitHub issue-form YAML → OnboardingRequest)
-- Onboarding service (validate → resolveProfiles → generate config → branch → PR)
-- Webhook handler (issues.opened + issues.labeled:approved)
-- **Verify:** Unit tests with form-body fixtures; duplicate call no-ops
-
 ### Phase 8 — Dashboard Module
+
 - Dashboard controller + service (all 6 endpoints)
 - Compliance scoring helper (`score.ts`)
 - Snapshot service + schema
@@ -650,12 +665,14 @@ Org-level, all repos. Webhook URL → `POST /api/webhooks/github`.
 - **Verify:** e2e with seeded Mongo; seed script populates
 
 ### Phase 9 — Audit + Scheduler
+
 - Audit log schema + service + interceptor
 - Scheduler: cache-refresh (hourly), drift-scan (daily), snapshot (weekly)
 - Manual trigger endpoint
 - **Verify:** Run jobs manually; repos updated, audit rows written
 
 ### Phase 10 — Policy Engine
+
 - Rule interface + 7 rules
 - Policy service (runs ruleset, composes score)
 - Drift service (declared vs actual comparison)
@@ -664,22 +681,26 @@ Org-level, all repos. Webhook URL → `POST /api/webhooks/github`.
 - **Verify:** Unit tests per rule; e2e for drift; seed drifted repo → reports details
 
 ### Phase 11 — Frontend Scaffold
+
 - Vite + React 19 + Tailwind v4 + react-router-dom 7
 - @tanstack/react-query 5
-- shadcn/ui primitives (button, card, badge, table, input, select, dialog, tabs, dropdown, skeleton, tooltip, sonner)
+- shadcn/ui primitives
 - AppShell (sidebar + topbar), login page, 404 page
 - Typed API client, query keys, auth hook
 - **Verify:** Login, sidebar navigation, placeholder pages
 
 ### Phase 12 — Frontend Pages + Charts
+
 - chart.js config (centralized, selective registration)
 - 5 chart components
 - Dashboard components (stat-card, repo-table, filter-bar, etc.)
 - All 6 pages wired to API hooks
 - **Verify:** All pages render with seeded data; charts draw; admin CRUD works
 
-### Phase 13 — Documentation
+### Phase 13 — Documentation + GitHub App Manifest
+
 - README, architecture.md
+- `.github/app.yml` — GitHub App manifest
 - `.github/workflows/ci.yml`
 - **Verify:** Quickstart from fresh clone
 

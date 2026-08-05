@@ -1,0 +1,86 @@
+name: 'Repository Onboarding'
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  onboard:
+    name: Onboard Repository
+    if: |
+      contains(github.event.issue.title, '[Onboarding]:') ||
+      github.event.label.name == 'approved'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse issue
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { parseOnboardingIssue } = await import(
+              '${{ github.workspace }}/scripts/parse-onboarding-issue.mjs'
+            );
+            const r = parseOnboardingIssue(context.payload.issue.body);
+            core.setOutput('repoName', r.repoName);
+            core.setOutput('type', r.type);
+            core.setOutput('language', r.language);
+            core.setOutput('options', JSON.stringify(r.options));
+            if (!r.repoName) core.setFailed('Could not parse repository name.');
+
+      - name: Validate repo exists
+        env:
+          GH_TOKEN: '${{ github.token }}'
+        run: |
+          repo="${{ github.repository_owner }}/${{ steps.parse.outputs.repoName }}"
+          if ! gh repo view "$repo" --json name > /dev/null 2>&1; then
+            echo "::error::Repository $repo does not exist."
+            gh issue comment "${{ github.event.issue.html_url }}" \
+              --body "❌ Repository \`${{ steps.parse.outputs.repoName }}\` does not exist. Create it first."
+            exit 1
+          fi
+
+      - name: Generate and write config
+        id: config
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { writeRepoConfig } = await import(
+              '${{ github.workspace }}/scripts/write-repo-config.mjs'
+            );
+            const result = writeRepoConfig({
+              workspace: process.env.GITHUB_WORKSPACE,
+              repoName: '${{ steps.parse.outputs.repoName }}',
+              type: '${{ steps.parse.outputs.type }}',
+              language: '${{ steps.parse.outputs.language }}',
+              options: JSON.parse('${{ steps.parse.outputs.options }}'),
+            });
+            core.setOutput('profiles', JSON.stringify(result.profiles));
+
+      - name: Create onboarding PR
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { createOnboardingPR } = await import(
+              '${{ github.workspace }}/scripts/create-onboarding-pr.mjs'
+            );
+            const result = await createOnboardingPR({
+              repoName: '${{ steps.parse.outputs.repoName }}',
+              language: '${{ steps.parse.outputs.language }}',
+              type: '${{ steps.parse.outputs.type }}',
+              profiles: JSON.parse('${{ steps.config.outputs.profiles }}'),
+            });
+            core.setOutput('prUrl', result.url);
+
+      - name: Comment on issue
+        if: steps.pr.outputs.prUrl != ''
+        env:
+          GH_TOKEN: '${{ github.token }}'
+        run: |
+          gh issue comment "${{ github.event.issue.html_url }}" \
+            --body "✅ **Onboarding PR**: ${{ steps.pr.outputs.prUrl }}"

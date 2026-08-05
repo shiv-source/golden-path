@@ -1,0 +1,17 @@
+# Example repository configuration
+# This is what the onboarding system generates when a developer requests repo setup.
+
+repository: my-api
+
+profiles:
+  - common
+  - node-service
+
+options:
+  codeql: true
+  gitleaks: true
+  dependabot: true
+  releaseAutomation: true
+
+# Language and type are inferred from profiles:
+# node-service → language: node, type: service
