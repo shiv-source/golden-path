@@ -80,14 +80,18 @@ jobs:
         if: inputs.tag != ''
         run: |
           TAG="${{ inputs.tag }}"
-          echo "tag_name=$TAG" >> "$GITHUB_OUTPUT"
-          echo "release_created=true" >> "$GITHUB_OUTPUT"
           VERSION=$(echo "$TAG" | sed 's/^v//' | sed 's/-.*//')
           IFS='.' read -r major minor patch <<< "$VERSION"
-          echo "major=$major" >> "$GITHUB_OUTPUT"
-          echo "minor=$minor" >> "$GITHUB_OUTPUT"
-          echo "patch=$patch" >> "$GITHUB_OUTPUT"
-          case "${TAG,,}" in *-rc.*|*-rc|*-alpha.*|*-alpha|*-beta.*|*-beta) echo "type=rc" >> "$GITHUB_OUTPUT" ;; *) echo "type=tag" >> "$GITHUB_OUTPUT" ;; esac
+          TYPE=tag
+          case "${TAG,,}" in *-rc.*|*-rc|*-alpha.*|*-alpha|*-beta.*|*-beta) TYPE=rc ;; esac
+          {
+            echo "tag_name=$TAG"
+            echo "release_created=true"
+            echo "major=$major"
+            echo "minor=$minor"
+            echo "patch=$patch"
+            echo "type=$TYPE"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Determine release type
         id: release-type
@@ -100,9 +104,11 @@ jobs:
             exit 0
           fi
           IFS='.' read -r p_major p_minor _ <<< "$prev"
-          if [ "${{ steps.release-please.outputs.major }}" -gt "$p_major" ]; then
+          c_major=${{ steps.release-please.outputs.major }}
+          c_minor=${{ steps.release-please.outputs.minor }}
+          if [[ $c_major -gt $p_major ]]; then
             echo "type=major" >> "$GITHUB_OUTPUT"
-          elif [ "${{ steps.release-please.outputs.minor }}" -gt "$p_minor" ]; then
+          elif [[ $c_minor -gt $p_minor ]]; then
             echo "type=minor" >> "$GITHUB_OUTPUT"
           else
             echo "type=patch" >> "$GITHUB_OUTPUT"

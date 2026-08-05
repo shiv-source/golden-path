@@ -75,6 +75,7 @@ jobs:
             flags="--tag ${{ inputs.npm-tag }}"
           fi
           npm version ${{ inputs.version }} --no-git-tag-version
+          # shellcheck disable=SC2086
           npm publish --provenance $flags
         working-directory: '${{ inputs.working-directory }}'
         env:

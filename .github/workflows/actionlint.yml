@@ -1,0 +1,23 @@
+name: 'Github Action Workflow Lint'
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'actionlint version'
+        type: string
+        default: '1.7.12'
+
+jobs:
+  actionlint:
+    name: Lint Workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install actionlint
+        run: |
+          curl -sSL https://github.com/rhysd/actionlint/releases/download/v${{ inputs.version }}/actionlint_${{ inputs.version }}_linux_amd64.tar.gz \
+            | tar -xz actionlint && chmod +x actionlint
+      - name: Run actionlint
+        run: ./actionlint -color
