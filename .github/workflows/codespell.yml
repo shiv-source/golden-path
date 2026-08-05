@@ -31,10 +31,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - uses: astral-sh/setup-uv@v5
 
       - name: Install codespell
-        run: uv tool install codespell==${{ inputs.version }}
+        run: uv pip install --system codespell==${{ inputs.version }}
 
       - name: Run codespell
         run: |
