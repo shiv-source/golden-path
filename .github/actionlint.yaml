@@ -1,0 +1,8 @@
+self-hosted-runner:
+  labels: []
+
+config-variables: []
+
+permissions:
+  contents: write
+  pull-requests: write
