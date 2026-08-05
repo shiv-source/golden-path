@@ -15,8 +15,16 @@ on:
         description: 'npm scope (e.g., @myorg) — omit for unscoped packages'
         type: string
         default: ''
+      version:
+        description: 'Explicit version to publish (skips release-please)'
+        type: string
+        default: ''
+      npm-tag:
+        description: 'npm dist-tag (e.g., next, beta). Only used when version is set.'
+        type: string
+        default: ''
       dry-run:
-        description: 'Run release-please in dry-run mode (no actual publish)'
+        description: 'Run in dry-run mode (no actual publish)'
         type: boolean
         default: false
       working-directory:
@@ -53,13 +61,27 @@ jobs:
 
       - name: Determine next version
         id: release-please
+        if: inputs.version == ''
         uses: googleapis/release-please-action@v4
         with:
           release-type: node
           dry-run: '${{ inputs.dry-run }}'
 
-      - name: Publish to npm
-        if: ${{ steps.release-please.outputs.release_created && !inputs.dry-run }}
+      - name: Publish explicit version
+        if: inputs.version != '' && !inputs.dry-run
+        run: |
+          flags=""
+          if [ -n "${{ inputs.npm-tag }}" ]; then
+            flags="--tag ${{ inputs.npm-tag }}"
+          fi
+          npm version ${{ inputs.version }} --no-git-tag-version
+          npm publish --provenance $flags
+        working-directory: '${{ inputs.working-directory }}'
+        env:
+          NODE_AUTH_TOKEN: '${{ secrets.NPM_TOKEN }}'
+
+      - name: Publish from release-please
+        if: steps.release-please.outputs.release_created && !inputs.dry-run
         run: npm publish --provenance
         working-directory: '${{ inputs.working-directory }}'
         env:
