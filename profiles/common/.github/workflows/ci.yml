@@ -1,0 +1,18 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+concurrency:
+  group: '${{ github.workflow }}-${{ github.ref }}'
+  cancel-in-progress: true
+jobs:
+  build-test:
+    uses: your-org/golden-path/.github/workflows/build-test-node.yml@main
+    secrets: inherit
+  security:
+    uses: your-org/golden-path/.github/workflows/security-scan.yml@main
+    with:
+      language: node
+    secrets: inherit
