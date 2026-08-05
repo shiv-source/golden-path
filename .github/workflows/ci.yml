@@ -39,3 +39,6 @@ jobs:
         with: { node-version: 22, cache: 'npm' }
       - run: npm ci
       - run: npm run format:check
+  actionlint:
+    name: Workflow Lint
+    uses: ./.github/workflows/actionlint.yml
