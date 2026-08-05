@@ -23,6 +23,14 @@ on:
         description: 'Branch to release from'
         type: string
         default: 'main'
+      body:
+        description: 'Additional release notes text'
+        type: string
+        default: ''
+      body-file:
+        description: 'Path to a file containing additional release notes'
+        type: string
+        default: ''
       extra-files:
         description: 'Newline-separated list of files to attach to release'
         type: string
@@ -59,27 +67,35 @@ jobs:
         id: release-type
         if: steps.release-please.outputs.release_created
         run: |
-          current="${{ steps.release-please.outputs.major }}.${{ steps.release-please.outputs.minor }}.${{ steps.release-please.outputs.patch }}"
           prefix="${{ inputs.tag-prefix }}"
-
-          # Find the previous tag (second in sorted semver list)
           prev=$(git tag --list "${prefix}*" --sort=-version:refname | sed -n 2p | sed "s/^${prefix}//")
-
           if [ -z "$prev" ]; then
             echo "type=initial" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-
-          IFS='.' read -r p_major p_minor p_patch <<< "$prev"
-          c_major=${{ steps.release-please.outputs.major }}
-          c_minor=${{ steps.release-please.outputs.minor }}
-
-          if [ "$c_major" -gt "$p_major" ]; then
+          IFS='.' read -r p_major p_minor _ <<< "$prev"
+          if [ "${{ steps.release-please.outputs.major }}" -gt "$p_major" ]; then
             echo "type=major" >> "$GITHUB_OUTPUT"
-          elif [ "$c_minor" -gt "$p_minor" ]; then
+          elif [ "${{ steps.release-please.outputs.minor }}" -gt "$p_minor" ]; then
             echo "type=minor" >> "$GITHUB_OUTPUT"
           else
             echo "type=patch" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build release notes file
+        id: notes
+        if: steps.release-please.outputs.release_created
+        env:
+          BODY: '${{ inputs.body }}'
+          BODY_FILE: '${{ inputs.body-file }}'
+        run: |
+          NOTES_FILE=$(mktemp)
+          echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
+          if [ -n "$BODY" ]; then
+            echo "$BODY" >> "$NOTES_FILE"
+          fi
+          if [ -n "$BODY_FILE" ] && [ -f "$BODY_FILE" ]; then
+            cat "$BODY_FILE" >> "$NOTES_FILE"
           fi
 
       - name: Create GitHub Release
@@ -87,15 +103,23 @@ jobs:
         env:
           GH_TOKEN: '${{ github.token }}'
           TAG: '${{ steps.release-please.outputs.tag_name }}'
+          NOTES_FILE: '${{ steps.release-type.outputs.notes_file }}'
         run: |
-          flags=""
-          ${{ inputs.draft }} && flags="$flags --draft"
-          ${{ inputs.prerelease }} && flags="$flags --prerelease"
-          ${{ inputs.generate-release-notes }} && flags="$flags --generate-notes"
+          NOTES_FILE="${{ steps.notes.outputs.notes_file }}"
 
-          gh release create "$TAG" \
-            --title "$TAG" \
-            $flags
+          set -- "$TAG" --title "$TAG"
+
+          ${{ inputs.draft }} && set -- "$@" --draft
+          ${{ inputs.prerelease }} && set -- "$@" --prerelease
+
+          if [ -s "$NOTES_FILE" ]; then
+            ${{ inputs.generate-release-notes }} && set -- "$@" --generate-notes
+            set -- "$@" --notes-file "$NOTES_FILE"
+          else
+            ${{ inputs.generate-release-notes }} && set -- "$@" --generate-notes
+          fi
+
+          gh release create "$@"
 
           if [ -n "${{ inputs.extra-files }}" ]; then
             echo "${{ inputs.extra-files }}" | while IFS= read -r file; do
