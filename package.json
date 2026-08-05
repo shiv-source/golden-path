@@ -8,7 +8,7 @@
   "scripts": {
     "lint": "eslint scripts/",
     "lint:workflows": "actionlint .github/workflows/*.yml",
-    "test": "node --test 'scripts/test/*.test.mjs'",
+    "test": "node --test 'scripts/test/**/*.test.mjs'",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
