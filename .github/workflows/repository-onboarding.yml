@@ -44,63 +44,36 @@ jobs:
             exit 1
           fi
 
-      - name: Generate config
+      - name: Generate and write config
         id: config
         uses: actions/github-script@v7
         with:
           script: |
-            const { generateRepoConfig } = await import(
-              '${{ github.workspace }}/scripts/generate-repo-config.mjs'
+            const { writeRepoConfig } = await import(
+              '${{ github.workspace }}/scripts/write-repo-config.mjs'
             );
-            const { resolveProfilesFor } = await import(
-              '${{ github.workspace }}/scripts/lib/profile-map.mjs'
-            );
-            const fs = require('node:fs');
-            const path = require('node:path');
-            const r = {
+            const result = writeRepoConfig({
+              workspace: process.env.GITHUB_WORKSPACE,
               repoName: '${{ steps.parse.outputs.repoName }}',
               type: '${{ steps.parse.outputs.type }}',
               language: '${{ steps.parse.outputs.language }}',
               options: JSON.parse('${{ steps.parse.outputs.options }}'),
-            };
-            const yaml = generateRepoConfig(r);
-            const dir = path.join(process.env.GITHUB_WORKSPACE, 'repositories');
-            fs.mkdirSync(dir, { recursive: true });
-            fs.writeFileSync(path.join(dir, `${r.repoName}.yaml`), yaml);
-            core.setOutput('profiles', JSON.stringify(resolveProfilesFor(r.language, r.type)));
+            });
+            core.setOutput('profiles', JSON.stringify(result.profiles));
 
-      - name: Create PR
+      - name: Create onboarding PR
         id: pr
         uses: actions/github-script@v7
         with:
           script: |
-            const { configureGit, commitAndPush } = await import(
-              '${{ github.workspace }}/scripts/git-commit-push.mjs'
+            const { createOnboardingPR } = await import(
+              '${{ github.workspace }}/scripts/create-onboarding-pr.mjs'
             );
-            const { openOrReusePR } = await import(
-              '${{ github.workspace }}/scripts/open-or-reuse-pr.mjs'
-            );
-            configureGit();
-            const branch = 'feature/onboard-${{ steps.parse.outputs.repoName }}';
-            commitAndPush({ branch, message: 'chore: onboard ${{ steps.parse.outputs.repoName }}', files: 'repositories/' });
-            const profiles = JSON.parse('${{ steps.config.outputs.profiles }}').join(', ');
-            const result = await openOrReusePR({
-              repo: '${{ github.repository }}',
-              baseBranch: 'main',
-              headBranch: branch,
-              title: 'Onboard ${{ steps.parse.outputs.repoName }}',
-              body: [
-                '## Repository Onboarding',
-                '',
-                '**Repository:** `${{ steps.parse.outputs.repoName }}`',
-                '**Language:** ${{ steps.parse.outputs.language }}',
-                '**Type:** ${{ steps.parse.outputs.type }}',
-                '**Profiles:** ' + profiles,
-                '',
-                'Generated `repositories/${{ steps.parse.outputs.repoName }}.yaml`.',
-                '',
-                'Once merged, `apply-repository-config.yml` will apply the standard configuration.',
-              ].join('\n'),
+            const result = await createOnboardingPR({
+              repoName: '${{ steps.parse.outputs.repoName }}',
+              language: '${{ steps.parse.outputs.language }}',
+              type: '${{ steps.parse.outputs.type }}',
+              profiles: JSON.parse('${{ steps.config.outputs.profiles }}'),
             });
             core.setOutput('prUrl', result.url);
 

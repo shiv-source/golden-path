@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Detect changed configs
+      - name: Detect
         id: detect
         uses: actions/github-script@v7
         with:
@@ -49,57 +49,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Read config and merge profiles
+      - name: Apply config to target repo
         id: merge
+        env:
+          GH_TOKEN: '${{ secrets.BOT_TOKEN || github.token }}'
         uses: actions/github-script@v7
         with:
           script: |
-            const { readProfiles } = await import(
-              '${{ github.workspace }}/scripts/read-profiles.mjs'
+            const { applyConfig } = await import(
+              '${{ github.workspace }}/scripts/apply-config.mjs'
             );
-            const { mergeProfiles } = await import(
-              '${{ github.workspace }}/scripts/merge-profiles.mjs'
-            );
-            const fs = require('node:fs');
-            const path = require('node:path');
-            const { execSync } = require('node:child_process');
-
-            const ws = process.env.GITHUB_WORKSPACE;
             const repoName = '${{ matrix.repo }}'.includes('/')
               ? '${{ matrix.repo }}'.split('/').pop()
               : '${{ matrix.repo }}';
-
-            const configYaml = fs.readFileSync(
-              path.join(ws, 'repositories', `${repoName}.yaml`), 'utf-8'
-            );
-            const profileNames = [];
-            for (const line of configYaml.split('\n')) {
-              const m = line.match(/^\s{2}-\s(\S+)/);
-              if (m && !line.trimStart().startsWith('#')) profileNames.push(m[1]);
-            }
-            core.setOutput('profiles', JSON.stringify(profileNames));
-
-            const profiles = readProfiles({ profilesDir: path.join(ws, 'profiles'), names: profileNames });
-            const merged = mergeProfiles(profiles);
-
-            const targetRepo = '${{ matrix.repo }}'.includes('/')
-              ? '${{ matrix.repo }}'
-              : '${{ github.repository_owner }}/${{ matrix.repo }}';
-            const targetDir = path.join(ws, 'target-repo');
-            execSync(`gh repo clone ${targetRepo} ${targetDir}`, { stdio: 'inherit' });
-
-            for (const f of merged.files) {
-              const dest = path.join(targetDir, f.path);
-              fs.mkdirSync(path.dirname(dest), { recursive: true });
-              fs.writeFileSync(dest, f.content);
-            }
-
-            core.setOutput('filesCopied', String(merged.files.length));
-            core.setOutput('conflictsFound', String(merged.conflicts.length > 0));
-            core.setOutput(
-              'conflictsList',
-              merged.conflicts.map((c) => `- \`${c.path}\`: ${c.message}`).join('\n'),
-            );
+            const result = applyConfig({
+              workspace: process.env.GITHUB_WORKSPACE,
+              repoName,
+              targetRepo: '${{ matrix.repo }}'.includes('/')
+                ? '${{ matrix.repo }}'
+                : '${{ github.repository_owner }}/${{ matrix.repo }}',
+            });
+            core.setOutput('profiles', JSON.stringify(result.profiles));
+            core.setOutput('filesCopied', String(result.filesCopied));
+            core.setOutput('conflictsFound', String(result.conflictsFound));
+            core.setOutput('conflictsList', result.conflictsList);
 
       - name: Create PR in target repo
         id: pr
@@ -108,49 +81,17 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { configureGit, commitAndPush } = await import(
-              '${{ github.workspace }}/scripts/git-commit-push.mjs'
-            );
-            const { openOrReusePR } = await import(
-              '${{ github.workspace }}/scripts/open-or-reuse-pr.mjs'
+            const { createApplyPR } = await import(
+              '${{ github.workspace }}/scripts/create-apply-pr.mjs'
             );
             const path = require('node:path');
-
-            const targetDir = path.join(process.env.GITHUB_WORKSPACE, 'target-repo');
-            const branch = 'feature/apply-org-config';
-            const repo = '${{ matrix.repo }}'.includes('/')
-              ? '${{ matrix.repo }}'
-              : '${{ github.repository_owner }}/${{ matrix.repo }}';
-
-            configureGit(targetDir);
-            const { skipped } = commitAndPush({
-              branch,
-              cwd: targetDir,
-              message: 'chore: apply organization standard configuration',
+            const result = await createApplyPR({
+              targetDir: path.join(process.env.GITHUB_WORKSPACE, 'target-repo'),
+              repo: '${{ matrix.repo }}'.includes('/')
+                ? '${{ matrix.repo }}'
+                : '${{ github.repository_owner }}/${{ matrix.repo }}',
+              filesCopied: Number('${{ steps.merge.outputs.filesCopied }}'),
+              conflictsFound: '${{ steps.merge.outputs.conflictsFound }}' === 'true',
+              conflictsList: '${{ steps.merge.outputs.conflictsList }}',
             });
-            if (skipped) {
-              core.info('No changes — skipping PR.');
-              return;
-            }
-
-            const conflicts = '${{ steps.merge.outputs.conflictsFound }}' === 'true'
-              ? '\n### ⚠️ Conflicts Detected\n\n${{ steps.merge.outputs.conflictsList }}\n'
-              : '';
-
-            const result = await openOrReusePR({
-              repo,
-              baseBranch: 'main',
-              headBranch: branch,
-              title: 'Apply organization standard configuration',
-              body: [
-                '## Apply Organization Standard Configuration',
-                '',
-                'This PR applies standardized configuration from [golden-path](https://github.com/${{ github.repository }}).',
-                '',
-                '**Repository:** `${{ matrix.repo }}`',
-                '**Files copied:** ${{ steps.merge.outputs.filesCopied }}',
-                conflicts,
-                '> Automatically generated. Please review carefully.',
-              ].filter(Boolean).join('\n'),
-            });
-            core.setOutput('prUrl', result.url);
+            if (result.url) core.setOutput('prUrl', result.url);
