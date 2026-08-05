@@ -109,7 +109,7 @@ jobs:
 
       - name: Build release notes file
         id: notes
-        if: steps.release-please.outputs.release_created
+        if: steps.release-please.outputs.release_created || steps.tag-info.outputs.release_created
         env:
           BODY: '${{ inputs.body }}'
           BODY_FILE: '${{ inputs.body-file }}'
@@ -124,12 +124,12 @@ jobs:
           fi
 
       - name: Create GitHub Release
-        if: steps.release-please.outputs.release_created
+        if: steps.release-please.outputs.release_created || steps.tag-info.outputs.release_created
         env:
           GH_TOKEN: '${{ github.token }}'
           TAG: '${{ inputs.tag || steps.release-please.outputs.tag_name }}'
-          IS_RC: "${{ inputs.prerelease-branch != ' && inputs.target-branch == inputs.prerelease-branch }}"
-          IS_TAG: "${{ inputs.tag != ' }}"
+          IS_RC: "${{ inputs.prerelease-branch != '' && inputs.target-branch == inputs.prerelease-branch }}"
+          IS_TAG: "${{ inputs.tag != '' }}"
         run: |
           NOTES_FILE="${{ steps.notes.outputs.notes_file }}"
 
