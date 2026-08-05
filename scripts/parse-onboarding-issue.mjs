@@ -39,8 +39,15 @@ export function parseOnboardingIssue(body) {
     }
   }
 
+  const repoName = (fields.repoName ?? '').trim();
+  if (!/^[A-Za-z0-9._-]+$/.test(repoName)) {
+    throw new Error(
+      `Invalid repository name "${repoName}". Must contain only letters, digits, dots, hyphens, and underscores.`,
+    );
+  }
+
   return {
-    repoName: fields.repoName ?? '',
+    repoName,
     type: normalizeField(fields.type ?? ''),
     language: normalizeField(fields.language ?? ''),
     options: fields.options ?? [],

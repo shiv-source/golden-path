@@ -7,37 +7,50 @@ on:
   workflow_dispatch:
     inputs:
       repo:
-        description: 'Repository to apply config to (e.g. org/repo)'
+        description: 'Repository to apply config to (owner/name)'
         type: string
         required: true
 
 jobs:
-  apply:
-    name: Apply Configuration
+  detect:
+    name: Detect Changed Repos
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    strategy:
-      matrix:
-        repo: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.repo)) || fromJSON(steps.changed.outputs.repos) }}
-
+    outputs:
+      repos: '${{ steps.detect.outputs.repos }}'
     steps:
       - uses: actions/checkout@v4
-
-      - name: Detect changed repos
-        id: changed
-        if: github.event_name == 'push'
+        with:
+          fetch-depth: 0
+      - name: Detect changed configs
+        id: detect
         uses: actions/github-script@v7
         with:
           script: |
             const { getChangedRepos } = await import(
               '${{ github.workspace }}/scripts/get-changed-repos.mjs'
             );
-            core.setOutput('repos', JSON.stringify(getChangedRepos()));
+            const before = context.payload.before || 'HEAD~1';
+            const after = context.payload.after || 'HEAD';
+            core.setOutput('repos', JSON.stringify(getChangedRepos(before, after)));
 
-      - name: Read config and resolve profiles
-        id: resolve
+  apply:
+    name: Apply Configuration
+    needs: ${{ github.event_name == 'push' && ['detect'] || [] }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        repo: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.repo)) || fromJSON(needs.detect.outputs.repos) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read config and merge profiles
+        id: merge
         uses: actions/github-script@v7
         with:
           script: |
@@ -56,22 +69,19 @@ jobs:
               ? '${{ matrix.repo }}'.split('/').pop()
               : '${{ matrix.repo }}';
 
-            // Read config YAML to extract profile names
             const configYaml = fs.readFileSync(
               path.join(ws, 'repositories', `${repoName}.yaml`), 'utf-8'
             );
             const profileNames = [];
             for (const line of configYaml.split('\n')) {
-              const m = line.match(/^\s+-\s+(\S+)/);
-              if (m) profileNames.push(m[1]);
+              const m = line.match(/^\s{2}-\s(\S+)/);
+              if (m && !line.trimStart().startsWith('#')) profileNames.push(m[1]);
             }
             core.setOutput('profiles', JSON.stringify(profileNames));
 
-            // Read profiles from filesystem + merge
             const profiles = readProfiles({ profilesDir: path.join(ws, 'profiles'), names: profileNames });
             const merged = mergeProfiles(profiles);
 
-            // Clone target repo and write merged files
             const targetRepo = '${{ matrix.repo }}'.includes('/')
               ? '${{ matrix.repo }}'
               : '${{ github.repository_owner }}/${{ matrix.repo }}';
@@ -93,6 +103,8 @@ jobs:
 
       - name: Create PR in target repo
         id: pr
+        env:
+          GH_TOKEN: '${{ secrets.BOT_TOKEN || github.token }}'
         uses: actions/github-script@v7
         with:
           script: |
@@ -110,7 +122,7 @@ jobs:
               ? '${{ matrix.repo }}'
               : '${{ github.repository_owner }}/${{ matrix.repo }}';
 
-            configureGit();
+            configureGit(targetDir);
             const { skipped } = commitAndPush({
               branch,
               cwd: targetDir,
@@ -121,8 +133,8 @@ jobs:
               return;
             }
 
-            const conflicts = '${{ steps.resolve.outputs.conflictsFound }}' === 'true'
-              ? '\n### ⚠️ Conflicts Detected\n\n${{ steps.resolve.outputs.conflictsList }}\n'
+            const conflicts = '${{ steps.merge.outputs.conflictsFound }}' === 'true'
+              ? '\n### ⚠️ Conflicts Detected\n\n${{ steps.merge.outputs.conflictsList }}\n'
               : '';
 
             const result = await openOrReusePR({
@@ -136,7 +148,7 @@ jobs:
                 'This PR applies standardized configuration from [golden-path](https://github.com/${{ github.repository }}).',
                 '',
                 '**Repository:** `${{ matrix.repo }}`',
-                '**Files copied:** ${{ steps.resolve.outputs.filesCopied }}',
+                '**Files copied:** ${{ steps.merge.outputs.filesCopied }}',
                 conflicts,
                 '> Automatically generated. Please review carefully.',
               ].filter(Boolean).join('\n'),

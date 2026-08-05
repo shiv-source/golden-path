@@ -5,10 +5,12 @@ import { execSync } from 'node:child_process';
 
 /**
  * Configure git user for the current workflow run.
+ * @param {string} [cwd] — working directory (defaults to current)
  */
-export function configureGit() {
-  execSync('git config user.name "github-actions[bot]"');
-  execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
+export function configureGit(cwd) {
+  const opts = cwd ? { cwd } : {};
+  execSync('git config user.name "github-actions[bot]"', opts);
+  execSync('git config user.email "github-actions[bot]@users.noreply.github.com"', opts);
 }
 
 /**

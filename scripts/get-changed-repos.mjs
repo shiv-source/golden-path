@@ -9,8 +9,8 @@ import { basename } from 'node:path';
  * Get repo names from changed config files in the last commit.
  * @returns {string[]}
  */
-export function getChangedRepos() {
-  const changed = execSync('git diff --name-only HEAD~1 HEAD -- repositories/')
+export function getChangedRepos(before = 'HEAD~1', after = 'HEAD') {
+  const changed = execSync(`git diff --name-only ${before} ${after} -- repositories/`)
     .toString()
     .trim()
     .split('\n')

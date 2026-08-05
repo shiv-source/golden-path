@@ -50,8 +50,6 @@ describe('profile-map', () => {
       const languages = getSupportedLanguages();
       assert.ok(languages.includes('node'));
       assert.ok(languages.includes('go'));
-      assert.ok(languages.includes('python'));
-      assert.ok(languages.includes('java'));
     });
   });
 

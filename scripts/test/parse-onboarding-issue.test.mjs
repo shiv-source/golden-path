@@ -36,10 +36,24 @@ describe('parse-onboarding-issue', () => {
     assert.throws(() => parseOnboardingIssue(null), /Issue body is required/);
   });
 
-  it('normalizes language field', () => {
-    const body = ['### Programming Language', 'Node.js', '', '### Repository Type', 'Service'].join(
-      '\n',
+  it('rejects invalid repo names (security)', () => {
+    assert.throws(
+      () => parseOnboardingIssue('### Repository Name\nx"; rm -rf /; echo "\n'),
+      /Invalid repository name/,
     );
+  });
+
+  it('normalizes language field (Node.js → node)', () => {
+    const body = [
+      '### Repository Name',
+      'my-service',
+      '',
+      '### Programming Language',
+      'Node.js',
+      '',
+      '### Repository Type',
+      'Service',
+    ].join('\n');
 
     const result = parseOnboardingIssue(body);
     assert.equal(result.language, 'node');
@@ -47,9 +61,9 @@ describe('parse-onboarding-issue', () => {
   });
 
   it('returns empty arrays for missing sections', () => {
-    const body = '### Random Heading\nsome content\n';
+    const body = '### Repository Name\nmy-service\n\n### Random Heading\nsome content\n';
     const result = parseOnboardingIssue(body);
-    assert.equal(result.repoName, '');
+    assert.equal(result.repoName, 'my-service');
     assert.equal(result.type, '');
     assert.equal(result.language, '');
     assert.deepEqual(result.options, []);

@@ -12,12 +12,6 @@ const PROFILE_MAP = {
   go: {
     service: ['common', 'go-service'],
   },
-  python: {
-    service: ['common', 'python-service'],
-  },
-  java: {
-    service: ['common', 'java-service'],
-  },
 };
 
 /**
