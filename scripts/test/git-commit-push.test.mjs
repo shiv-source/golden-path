@@ -6,6 +6,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { configureGit, commitAndPush } from '../git-commit-push.mjs';
 
+const silent = { stdio: 'pipe' };
+
 describe('git-commit-push', () => {
   describe('configureGit', () => {
     it('exports a function', () => {
@@ -17,12 +19,12 @@ describe('git-commit-push', () => {
     it('skips when there are no new changes', () => {
       const dir = mkdtempSync(join(tmpdir(), 'gp-test-'));
       try {
-        execSync('git init', { cwd: dir });
-        execSync('git config user.email "test@test.com"', { cwd: dir });
-        execSync('git config user.name "Test"', { cwd: dir });
+        execSync('git init -b main', { cwd: dir, ...silent });
+        execSync('git config user.email "test@test.com"', { cwd: dir, ...silent });
+        execSync('git config user.name "Test"', { cwd: dir, ...silent });
         writeFileSync(join(dir, 'README.md'), '# test');
-        execSync('git add -A', { cwd: dir });
-        execSync('git commit -m "init"', { cwd: dir });
+        execSync('git add -A', { cwd: dir, ...silent });
+        execSync('git commit -m "init"', { cwd: dir, ...silent });
 
         const result = commitAndPush({
           branch: 'feature/test',
@@ -40,12 +42,12 @@ describe('git-commit-push', () => {
     it('commits when there are new changes (push fails without remote)', () => {
       const dir = mkdtempSync(join(tmpdir(), 'gp-test-'));
       try {
-        execSync('git init', { cwd: dir });
-        execSync('git config user.email "test@test.com"', { cwd: dir });
-        execSync('git config user.name "Test"', { cwd: dir });
+        execSync('git init -b main', { cwd: dir, ...silent });
+        execSync('git config user.email "test@test.com"', { cwd: dir, ...silent });
+        execSync('git config user.name "Test"', { cwd: dir, ...silent });
         writeFileSync(join(dir, 'README.md'), '# test');
-        execSync('git add -A', { cwd: dir });
-        execSync('git commit -m "init"', { cwd: dir });
+        execSync('git add -A', { cwd: dir, ...silent });
+        execSync('git commit -m "init"', { cwd: dir, ...silent });
 
         writeFileSync(join(dir, 'new-file.txt'), 'content');
 
@@ -56,7 +58,6 @@ describe('git-commit-push', () => {
         });
 
         assert.equal(result.skipped, false);
-        // push fails in test (no origin remote) but commit succeeded
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }
