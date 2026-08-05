@@ -35,10 +35,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      - uses: astral-sh/setup-uv@v5
-
-      - name: Install codespell
-        run: uv pip install --system codespell==${{ inputs.version }}
+      - name: Install uv and codespell
+        run: |
+          pip install uv
+          uv pip install --system codespell==${{ inputs.version }}
 
       - name: Run codespell
         run: |
