@@ -1,0 +1,116 @@
+name: 'Repository Onboarding'
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  onboard:
+    name: Onboard Repository
+    if: |
+      github.event.issue.title == '[Onboarding]: ' ||
+      github.event.label.name == 'approved'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse issue form
+        id: parse
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { parseOnboardingIssue } = await import(
+              '${{ github.workspace }}/scripts/parse-onboarding-issue.mjs'
+            );
+            const body = context.payload.issue.body;
+            const request = parseOnboardingIssue(body);
+            core.setOutput('repoName', request.repoName);
+            core.setOutput('type', request.type);
+            core.setOutput('language', request.language);
+            core.setOutput('options', JSON.stringify(request.options));
+            if (!request.repoName) {
+              core.setFailed('Could not parse repository name from issue body.');
+            }
+
+      - name: Validate repository exists
+        env:
+          GH_TOKEN: '${{ github.token }}'
+        run: |
+          repo="${{ github.repository_owner }}/${{ steps.parse.outputs.repoName }}"
+          if gh repo view "$repo" --json name > /dev/null 2>&1; then
+            echo "Repository $repo exists."
+          else
+            echo "::error::Repository $repo does not exist in this organization."
+            gh issue comment "${{ github.event.issue.html_url }}" \
+              --body "❌ **Validation failed**: Repository \`${{ steps.parse.outputs.repoName }}\` does not exist in this organization. Please create it first."
+            exit 1
+          fi
+
+      - name: Generate repository config
+        id: config
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { generateRepoConfig } = await import(
+              '${{ github.workspace }}/scripts/generate-repo-config.mjs'
+            );
+            const request = {
+              repoName: '${{ steps.parse.outputs.repoName }}',
+              type: '${{ steps.parse.outputs.type }}',
+              language: '${{ steps.parse.outputs.language }}',
+              options: JSON.parse('${{ steps.parse.outputs.options }}'),
+            };
+            const yaml = generateRepoConfig(request);
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const dir = path.join(process.env.GITHUB_WORKSPACE, 'repositories');
+            fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(path.join(dir, `${request.repoName}.yaml`), yaml);
+            core.setOutput('profiles', JSON.stringify(
+              (await import('${{ github.workspace }}/scripts/lib/profile-map.mjs'))
+                .resolveProfilesFor(request.language, request.type)
+            ));
+
+      - name: Create branch and PR
+        id: pr
+        env:
+          GH_TOKEN: '${{ github.token }}'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+
+          branch="feature/onboard-${{ steps.parse.outputs.repoName }}"
+          git checkout -b "$branch"
+          git add repositories/
+          git commit -m "chore: onboard ${{ steps.parse.outputs.repoName }}" || echo "No changes"
+          git push origin "$branch" --force
+
+          pr_url=$(gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "Onboard ${{ steps.parse.outputs.repoName }}" \
+            --body "## Repository Onboarding
+
+          **Repository:** \`${{ steps.parse.outputs.repoName }}\`
+          **Language:** ${{ steps.parse.outputs.language }}
+          **Type:** ${{ steps.parse.outputs.type }}
+          **Profiles:** $(echo '${{ steps.config.outputs.profiles }}' | jq -r 'join(", ")')
+
+          Generated \`repositories/${{ steps.parse.outputs.repoName }}.yaml\`.
+
+          Once merged, \`apply-repository-config.yml\` will create a PR in the target repository to apply the standard configuration files." 2>&1)
+
+          echo "pr_url=$pr_url" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on issue
+        if: steps.pr.outputs.pr_url != ''
+        env:
+          GH_TOKEN: '${{ github.token }}'
+        run: |
+          gh issue comment "${{ github.event.issue.html_url }}" \
+            --body "✅ **Onboarding PR created**: ${{ steps.pr.outputs.pr_url }}
+
+          This PR adds the repository configuration for \`${{ steps.parse.outputs.repoName }}\`. Once merged, the standard configuration files will be applied to the target repository."
