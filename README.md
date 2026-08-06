@@ -18,7 +18,7 @@ Internal developer platform — standardized, reusable CI/CD workflows, automate
 | `deploy-service.yml`          | Docker build → push → deploy                  |
 | `dependency-update.yml`       | Dependabot auto-merge                         |
 | `actionlint.yml`              | Workflow linting                              |
-| `ci.yml`                      | Lint, test, format, secret-scan               |
+| `self-ci.yml`                 | Lint, test, format, secret-scan               |
 
 ## Quickstart
 

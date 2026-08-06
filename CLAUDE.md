@@ -69,7 +69,7 @@ All reusable workflows live in `.github/workflows/`. Every script is consumed by
 
 | Workflow                      | Type                 | Purpose                                       |
 | ----------------------------- | -------------------- | --------------------------------------------- |
-| `ci.yml`                      | Triggered + reusable | Lint, test, format, actionlint, secret-scan   |
+| `self-ci.yml`                 | Triggered + reusable | Lint, test, format, actionlint, secret-scan   |
 | `release-github.yml`          | Reusable             | GitHub Release (tag-driven or release-please) |
 | `release-npm.yml`             | Reusable             | npm publish                                   |
 | `release-github-npm.yml`      | Reusable             | GitHub Release → npm publish                  |
