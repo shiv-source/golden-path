@@ -19,7 +19,7 @@ jobs:
 
       - name: Parse issue
         id: parse
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const { parseOnboardingIssue } = await import(
@@ -46,7 +46,7 @@ jobs:
 
       - name: Generate and write config
         id: config
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const { writeRepoConfig } = await import(
@@ -63,7 +63,7 @@ jobs:
 
       - name: Create onboarding PR
         id: pr
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const { createOnboardingPR } = await import(

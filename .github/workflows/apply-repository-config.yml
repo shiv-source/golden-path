@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
       - name: Detect
         id: detect
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             if ('${{ github.event_name }}' === 'workflow_dispatch') {
@@ -56,7 +56,7 @@ jobs:
         id: merge
         env:
           GH_TOKEN: '${{ secrets.BOT_TOKEN || github.token }}'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const { applyConfig } = await import(
@@ -85,7 +85,7 @@ jobs:
         id: pr
         env:
           GH_TOKEN: '${{ secrets.BOT_TOKEN || github.token }}'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const { createApplyPR } = await import(
