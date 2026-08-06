@@ -10,6 +10,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   lint:
+    if: github.repository == 'shiv-source/golden-path'
     name: Lint Scripts
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -20,6 +21,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
   test:
+    if: github.repository == 'shiv-source/golden-path'
     name: Test Scripts
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -30,6 +32,7 @@ jobs:
       - run: npm ci
       - run: npm test
   format:
+    if: github.repository == 'shiv-source/golden-path'
     name: Format Check
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -40,8 +43,10 @@ jobs:
       - run: npm ci
       - run: npm run format:check
   actionlint:
+    if: github.repository == 'shiv-source/golden-path'
     name: Workflow Lint
     uses: ./.github/workflows/actionlint.yml
   secret-scan:
+    if: github.repository == 'shiv-source/golden-path'
     name: Secret Scan
     uses: ./.github/workflows/secret-scan-betterleaks.yml
