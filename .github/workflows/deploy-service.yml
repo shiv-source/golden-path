@@ -52,7 +52,7 @@ jobs:
 
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: '${{ steps.registry.outputs.value }}/${{ github.repository_owner }}/${{ inputs.image-name }}'
           tags: |
