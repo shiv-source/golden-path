@@ -27,9 +27,9 @@ Add the files your Rust services need (e.g., `rust-toolchain.toml`, `clippy.toml
 
 Edit `.github/ISSUE_TEMPLATE/repository-onboarding.yml` — add `Rust` to the language dropdown.
 
-### Step 4: Sync with platform-observability
+### Step 4: Sync with platform-hub
 
-The `packages/shared/src/profile-map.ts` in `platform-observability` has the same mapping table. Keep it in sync.
+The `packages/shared/src/profile-map.ts` in `platform-hub` has the same mapping table. Keep it in sync.
 
 ### Step 5: Create reusable workflow (optional)
 

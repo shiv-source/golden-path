@@ -47,7 +47,7 @@
 └───────────────────────────────────────────────────────┘
 
 ┌───────────────────────────────────────────────────────┐
-│  platform-observability (sibling repo)                 │
+│  platform-hub (sibling repo)                 │
 │  NestJS + React dashboard, policy engine, GitHub App   │
 │  Reads repos/*.yaml from golden-path via GitHub API    │
 └───────────────────────────────────────────────────────┘
