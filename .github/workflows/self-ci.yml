@@ -9,8 +9,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  gate:
+    if: github.repository == 'shiv-source/golden-path'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Running on golden-path repo"
+
   lint:
     name: Lint Scripts
+    needs: [gate]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -21,6 +28,7 @@ jobs:
       - run: npm run lint
   test:
     name: Test Scripts
+    needs: [gate]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -31,6 +39,7 @@ jobs:
       - run: npm test
   format:
     name: Format Check
+    needs: [gate]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -41,7 +50,9 @@ jobs:
       - run: npm run format:check
   actionlint:
     name: Workflow Lint
+    needs: [gate]
     uses: ./.github/workflows/actionlint.yml
   secret-scan:
     name: Secret Scan
+    needs: [gate]
     uses: ./.github/workflows/secret-scan-betterleaks.yml

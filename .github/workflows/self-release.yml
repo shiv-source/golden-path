@@ -10,10 +10,17 @@ permissions:
   pull-requests: write
 
 jobs:
+  gate:
+    if: github.repository == 'shiv-source/golden-path'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Running on golden-path repo"
+
   ci:
     name: CI
     if: github.ref_type == 'tag'
-    uses: ./.github/workflows/ci.yml
+    needs: [gate]
+    uses: ./.github/workflows/self-ci.yml
 
   release:
     name: Release
