@@ -25,7 +25,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '${{ inputs.node-version }}'
@@ -41,7 +41,7 @@ jobs:
     name: Type Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '${{ inputs.node-version }}'
@@ -61,7 +61,7 @@ jobs:
       matrix:
         shard: ${{ fromJSON(format('[1,{0}]', inputs.shard-count)) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '${{ inputs.node-version }}'
@@ -78,7 +78,7 @@ jobs:
     needs: [lint, typecheck, test]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '${{ inputs.node-version }}'

@@ -36,7 +36,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set registry
         id: registry
@@ -75,6 +75,6 @@ jobs:
     needs: [build-and-push]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Deploy
         run: '${{ inputs.deploy-command }}'
