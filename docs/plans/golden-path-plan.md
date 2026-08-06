@@ -6,7 +6,7 @@
 
 ## Scope
 
-Golden-path is the **toolkit** consumed by 100+ repos across the org. It does NOT contain the dashboard — the dashboard lives in the sibling repo [`platform-observability`](../../../platform-observability/docs/plans/platform-observability-plan.md).
+Golden-path is the **toolkit** consumed by 100+ repos across the org. It does NOT contain the dashboard — the dashboard lives in the sibling repo [`platform-hub`](../../../platform-hub/docs/plans/platform-hub-plan.md).
 
 ### What Lives Here
 
@@ -16,7 +16,7 @@ Golden-path is the **toolkit** consumed by 100+ repos across the org. It does NO
 | 2. Onboarding System  | Issue form → validate → generate config → PR                      |
 | 3. Profile Templates  | File templates for common, node-library, node-service, go-service |
 
-### What Lives in platform-observability
+### What Lives in platform-hub
 
 | Layer            | What                                                                      |
 | ---------------- | ------------------------------------------------------------------------- |
@@ -89,7 +89,7 @@ golden-path/
 └── README.md
 ```
 
-**No monorepo, no TypeScript, no shared package, no turbo.** The only language here is YAML + plain `.mjs` scripts. The `platform-observability` repo defines its own types.
+**No monorepo, no TypeScript, no shared package, no turbo.** The only language here is YAML + plain `.mjs` scripts. The `platform-hub` repo defines its own types.
 
 ---
 
@@ -139,7 +139,7 @@ jobs:
 - **`@main` pinning** with optional `@v1` tags for teams wanting stability
 - **`secrets: inherit`** — org-level secrets flow down, no per-repo secret setup
 - **Opinionated defaults** — Node 22, Go stable. Overridable via inputs
-- **Security scans are advisory** — don't block builds, findings surface in dashboard (platform-observability)
+- **Security scans are advisory** — don't block builds, findings surface in dashboard (platform-hub)
 - **Reusable workflows** (not composite actions) — visible as separate CI jobs, independently retryable
 
 ---
@@ -250,7 +250,7 @@ Dockerfile                — multi-stage Go build
 
 All scripts are plain `.mjs` (Node ES modules) for zero-config execution in GitHub Actions. No TypeScript, no build step, no dependencies. Profile mapping lives in `scripts/lib/profile-map.mjs`.
 
-> **Note:** The profile mapping table is duplicated between golden-path (`scripts/lib/profile-map.mjs`) and platform-observability (`packages/shared/`). This is intentional — a 15-line lookup table doesn't justify a shared package. Both repos must keep their copy in sync when adding new languages or profile types.
+> **Note:** The profile mapping table is duplicated between golden-path (`scripts/lib/profile-map.mjs`) and platform-hub (`packages/shared/`). This is intentional — a 15-line lookup table doesn't justify a shared package. Both repos must keep their copy in sync when adding new languages or profile types.
 
 | Script                       | Purpose                                                       | Used By                           |
 | ---------------------------- | ------------------------------------------------------------- | --------------------------------- |

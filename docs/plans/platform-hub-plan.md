@@ -1,8 +1,8 @@
-# platform-observability — Implementation Plan
+# platform-hub — Implementation Plan
 
 **Date:** 2026-08-06
 **Status:** Ready for implementation
-**Repo:** `our-org/platform-observability` (to be created)
+**Repo:** `our-org/platform-hub` (to be created)
 
 ## Scope
 
@@ -52,7 +52,7 @@ Platform-observability is the **hosted web application** that provides visibilit
 ## Repository Structure
 
 ```
-platform-observability/
+platform-hub/
 ├── package.json                    # workspace root
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json
@@ -325,7 +325,7 @@ GET    /api/health                    → app + MongoDB connection state
 
 ```bash
 PORT=3000
-MONGO_URI=mongodb://localhost:27017/platform-observability
+MONGO_URI=mongodb://localhost:27017/platform-hub
 GITHUB_CLIENT_ID=          # OAuth App client ID
 GITHUB_CLIENT_SECRET=      # OAuth App client secret
 GITHUB_TOKEN=              # PAT or installation token for API access
