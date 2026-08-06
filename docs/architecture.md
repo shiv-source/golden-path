@@ -8,24 +8,34 @@
 │                                                        │
 │  ┌─────────────────┐  ┌─────────────────────────────┐ │
 │  │ Reusable         │  │ Onboarding System            │ │
-│  │ Workflows        │  │                              │ │
-│  │ (GitHub Actions) │  │ Issue Form → Parse → Validate│ │
-│  │                  │  │ → Generate Config → PR       │ │
-│  │ • build-test     │  │                              │ │
+│  │ Workflows (15)   │  │                              │ │
+│  │                  │  │ Issue Form → Parse → Validate│ │
+│  │ • build-test-node│  │ → Generate Config → PR       │ │
+│  │ • build-test-go  │  │                              │ │
 │  │ • security-scan  │  │ → Merge PR → Apply Config →  │ │
-│  │ • release-npm    │  │   PR in Target Repo          │ │
+│  │ • codespell      │  │   PR in Target Repo          │ │
+│  │ • betterleaks    │  └─────────────────────────────┘ │
+│  │ • ggshield       │                                  │
+│  │ • release-github │  ┌─────────────────────────────┐ │
+│  │ • release-npm    │  │ Profile Templates             │ │
+│  │ • release-github │  │ common/ node-library/         │ │
+│  │   -npm           │  │ node-service/ go-service/     │ │
 │  │ • deploy-service │  └─────────────────────────────┘ │
-│  │ • compliance     │                                  │
-│  │ • deps-automerge │  ┌─────────────────────────────┐ │
-│  └─────────────────┘  │ Profile Templates             │ │
-│                       │ common/ node-library/          │ │
-│  ┌─────────────────┐  │ node-service/ go-service/     │ │
-│  │ Scripts (.mjs)   │  └─────────────────────────────┘ │
-│  │ parse/generate/  │                                  │
-│  │ merge/compliance │  ┌─────────────────────────────┐ │
-│  │ profile-map      │  │ Repo Configs                 │ │
+│  │ • dep-automerge  │                                  │
+│  │ • actionlint     │  ┌─────────────────────────────┐ │
+│  │ • ci             │  │ Repo Configs                 │ │
 │  └─────────────────┘  │ repositories/*.yaml           │ │
 │                       └─────────────────────────────┘ │
+│  ┌─────────────────┐                                  │
+│  │ Scripts (12.mjs) │  ┌─────────────────────────────┐ │
+│  │ lib/: gh,fs,     │  │ Dev Tooling                  │ │
+│  │   profile-map    │  │ Husky, Commitlint, ESLint,   │ │
+│  │ apply-config     │  │ Prettier, VS Code            │ │
+│  │ merge-profiles   │  └─────────────────────────────┘ │
+│  │ onboarding PRs   │                                  │
+│  │ compliance-check │                                  │
+│  │ git-commit-push  │                                  │
+│  └─────────────────┘                                  │
 └──────────────────────┬────────────────────────────────┘
                        │
                        │ uses: golden-path/.github/workflows/*.yml@main
