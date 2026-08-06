@@ -4,7 +4,7 @@ set -euo pipefail
 echo "Fetching and pruning remote references..."
 git fetch --prune --quiet
 
-gone=$(git branch -vv | grep ': gone]' | awk '{print $1}' | sed 's/^\*//')
+gone=$(git branch -vv | grep ': gone]' | awk '{print $1}' | sed 's/^\*//' || true)
 
 if [ -z "$gone" ]; then
   echo "No stale branches to delete."
