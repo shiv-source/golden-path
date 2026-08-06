@@ -20,10 +20,10 @@ echo ""
 
 if [ -t 0 ]; then
   read -r -p "Delete these local branches? [y/N] " confirm
-  if [ "${confirm,,}" != "y" ]; then
-    echo "Aborted."
-    exit 0
-  fi
+  case "$confirm" in
+    [yY] | [yY][eE][sS]) ;;
+    *) echo "Aborted."; exit 0 ;;
+  esac
 fi
 
 for branch in $gone; do
