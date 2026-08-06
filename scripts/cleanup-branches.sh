@@ -4,7 +4,7 @@ set -euo pipefail
 echo "Fetching and pruning remote references..."
 git fetch --prune --quiet
 
-gone=$(git branch -vv | grep ': gone]' | awk '{print $1}' | sed 's/^\*//')
+gone=$(git branch -vv | grep ': gone]' | awk '{print $1}' | sed 's/^\*//' | grep -v '^$' || true)
 
 if [ -z "$gone" ]; then
   echo "No stale branches to delete."
@@ -20,15 +20,18 @@ echo ""
 
 if [ -t 0 ]; then
   read -r -p "Delete these local branches? [y/N] " confirm
-  if [ "${confirm,,}" != "y" ]; then
-    echo "Aborted."
-    exit 0
-  fi
+  case "$confirm" in
+    [yY] | [yY][eE][sS]) ;;
+    *) echo "Aborted."; exit 0 ;;
+  esac
 fi
 
 for branch in $gone; do
-  git branch -D "$branch"
-  echo "  Deleted: $branch"
+  if git branch -D "$branch" 2>/dev/null; then
+    echo "  Deleted: $branch"
+  else
+    echo "  Skipped: $branch (not found)"
+  fi
 done
 
 echo ""
