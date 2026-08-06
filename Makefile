@@ -42,3 +42,7 @@ release-minor: ## Release minor (v1.0.1 → v1.1.0)
 # Bump major version and create GitHub Release
 release-major: ## Release major (v1.1.0 → v2.0.0)
 	./scripts/release.sh major
+
+# Delete local branches whose remote has been removed
+cleanup-branches: ## Cleanup stale local branches
+	./scripts/cleanup-branches.sh
