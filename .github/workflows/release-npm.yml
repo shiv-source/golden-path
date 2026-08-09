@@ -85,10 +85,12 @@ jobs:
         run: |
           V=$(echo "${{ inputs.version }}" | sed 's/-.*//')
           IFS='.' read -r major minor patch <<< "$V"
-          echo "major=$major" >> "$GITHUB_OUTPUT"
-          echo "minor=$minor" >> "$GITHUB_OUTPUT"
-          echo "patch=$patch" >> "$GITHUB_OUTPUT"
-          echo "release_created=${{ !inputs.dry-run }}" >> "$GITHUB_OUTPUT"
+          {
+            echo "major=$major"
+            echo "minor=$minor"
+            echo "patch=$patch"
+            echo "release_created=${{ !inputs.dry-run }}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Publish explicit version
         if: inputs.version != '' && !inputs.dry-run
