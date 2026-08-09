@@ -10,6 +10,7 @@ jobs:
       contains(github.event.issue.title, '[Onboarding]:') ||
       github.event.label.name == 'approved'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
       issues: write

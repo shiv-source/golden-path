@@ -90,5 +90,6 @@ All reusable workflows live in `.github/workflows/`. Every script is consumed by
 - **Idempotent** — onboarding and config application safe to re-run
 - **Never overwrite silently** — conflicts flagged for manual review
 - **Exact versions** — `.npmrc` has `save-exact=true`
-- **Timeouts** — all CI jobs have `timeout-minutes`
+- **Timeouts** — every job must have `timeout-minutes: 15`
 - **GitHub Actions bot identity** — all automated PRs attributed to `github-actions[bot]`
+- **Workflow naming** — inputs: `kebab-case`, outputs: `snake_case`, secrets: `UPPER_SNAKE_CASE`. Reusable workflows with outputs MUST declare `on.workflow_call.outputs`. Boolean outputs use `is_` prefix.

@@ -24,10 +24,14 @@ on:
         type: string
         default: ''
 
+permissions:
+  contents: read
+
 jobs:
   check:
     name: Spell Check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -43,7 +47,7 @@ jobs:
       - name: Run codespell
         run: |
           codespell \
-            ${{ inputs.path }} \
+            "${{ inputs.path }}" \
             ${{ inputs.ignore-words-file && format('--ignore-words {0}', inputs.ignore-words-file) || '' }} \
             --skip '${{ inputs.skip }}' \
             ${{ inputs.args }}
