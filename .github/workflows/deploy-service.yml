@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       registry:
-        description: 'Container registry (e.g., ghcr.io/org)'
+        description: 'Container registry hostname (e.g., ghcr.io)'
         type: string
         default: ''
       image-name:
@@ -27,14 +27,30 @@ on:
       REGISTRY_TOKEN:
         description: 'Container registry auth token'
         required: true
+    outputs:
+      image:
+        description: 'Fully-qualified container image name (registry/owner/name)'
+        value: '${{ jobs.build-and-push.outputs.image }}'
+      digest:
+        description: 'Immutable image digest (sha256:...) for deployment pinning'
+        value: '${{ jobs.build-and-push.outputs.digest }}'
+      tags:
+        description: 'Image tags applied (newline-separated)'
+        value: '${{ jobs.build-and-push.outputs.tags }}'
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   build-and-push:
     name: Build & Push
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    timeout-minutes: 15
+    outputs:
+      image: '${{ steps.registry.outputs.value }}/${{ github.repository_owner }}/${{ inputs.image-name }}'
+      digest: '${{ steps.build-and-push.outputs.digest }}'
+      tags: '${{ steps.meta.outputs.tags }}'
     steps:
       - uses: actions/checkout@v4
 
@@ -61,6 +77,7 @@ jobs:
             type=semver,pattern={{version}}
 
       - name: Build and push
+        id: build-and-push
         uses: docker/build-push-action@v6
         with:
           context: '${{ inputs.context }}'
@@ -74,7 +91,12 @@ jobs:
     if: ${{ inputs.deploy-command != '' }}
     needs: [build-and-push]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Deploy
+        env:
+          IMAGE: '${{ needs.build-and-push.outputs.image }}'
+          DIGEST: '${{ needs.build-and-push.outputs.digest }}'
+          TAGS: '${{ needs.build-and-push.outputs.tags }}'
         run: '${{ inputs.deploy-command }}'

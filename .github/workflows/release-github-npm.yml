@@ -31,6 +31,25 @@ on:
       NPM_TOKEN:
         description: 'npm registry auth token'
         required: true
+    outputs:
+      tag_name:
+        description: 'Created tag name from GitHub release'
+        value: '${{ jobs.github-release.outputs.tag_name }}'
+      version:
+        description: 'Published semantic version'
+        value: '${{ jobs.github-release.outputs.version }}'
+      is_released:
+        description: 'Whether a GitHub release was created'
+        value: '${{ jobs.github-release.outputs.is_released }}'
+      is_prerelease:
+        description: 'Whether this is a prerelease'
+        value: '${{ jobs.github-release.outputs.is_prerelease }}'
+      release_type:
+        description: 'Release type: major, minor, patch, initial, rc, or tag'
+        value: '${{ jobs.github-release.outputs.release_type }}'
+      is_npm_published:
+        description: 'Whether the package was published to npm. False when skipped (dry-run, blocked prerelease, or npm-publish job did not run)'
+        value: '${{ jobs.npm-publish.outputs.release_created }}'
 
 jobs:
   github-release:
@@ -45,7 +64,7 @@ jobs:
     needs: [github-release]
     # actionlint can't resolve outputs from reusable workflows called via ./ path
     # All outputs are defined in release-github.yml
-    if: needs.github-release.outputs.isReleased == 'true' && (needs.github-release.outputs.is_prerelease != 'true' || inputs.npm-prerelease)
+    if: needs.github-release.outputs.is_released == 'true' && (needs.github-release.outputs.is_prerelease != 'true' || inputs.npm-prerelease)
     uses: ./.github/workflows/release-npm.yml
     with:
       version: '${{ needs.github-release.outputs.version }}'

@@ -13,6 +13,7 @@ jobs:
   gate:
     if: github.repository == 'shiv-source/golden-path'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - run: echo "Running on golden-path repo"
 

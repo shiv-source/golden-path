@@ -43,24 +43,50 @@ on:
         description: 'Newline-separated list of files to attach to release'
         type: string
         default: ''
+    outputs:
+      tag_name:
+        description: 'Created tag name'
+        value: '${{ jobs.release.outputs.tag_name }}'
+      version:
+        description: 'Semantic version (e.g., 1.2.3)'
+        value: '${{ jobs.release.outputs.version }}'
+      is_released:
+        description: 'Whether a release was created'
+        value: '${{ jobs.release.outputs.is_released }}'
+      is_prerelease:
+        description: 'Whether this is a prerelease'
+        value: '${{ jobs.release.outputs.is_prerelease }}'
+      release_type:
+        description: 'Release type: major, minor, patch, initial, rc, or tag'
+        value: '${{ jobs.release.outputs.release_type }}'
+      major:
+        description: 'Major version number'
+        value: '${{ jobs.release.outputs.major }}'
+      minor:
+        description: 'Minor version number'
+        value: '${{ jobs.release.outputs.minor }}'
+      patch:
+        description: 'Patch version number'
+        value: '${{ jobs.release.outputs.patch }}'
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       tag_name: '${{ steps.release-please.outputs.tag_name || steps.tag-info.outputs.tag_name }}'
-      version: '${{ steps.release-please.outputs.major || steps.tag-info.outputs.major }}.${{ steps.release-please.outputs.minor || steps.tag-info.outputs.minor }}.${{ steps.release-please.outputs.patch || steps.tag-info.outputs.patch }}'
-      release_created: '${{ steps.release-please.outputs.release_created || steps.tag-info.outputs.release_created }}'
-      isReleased: '${{ steps.release-please.outputs.release_created || steps.tag-info.outputs.release_created }}'
+      version: "${{ (steps.release-please.outputs.major || steps.tag-info.outputs.major) && format('{0}.{1}.{2}', steps.release-please.outputs.major || steps.tag-info.outputs.major, steps.release-please.outputs.minor || steps.tag-info.outputs.minor, steps.release-please.outputs.patch || steps.tag-info.outputs.patch) || '' }}"
+      is_released: '${{ steps.release-please.outputs.release_created || steps.tag-info.outputs.release_created }}'
       release_type: '${{ steps.release-type.outputs.type || steps.tag-info.outputs.type }}'
-      is_prerelease: "${{ (inputs.prerelease-branch != '' && inputs.target-branch == inputs.prerelease-branch) || steps.tag-info.outputs.type == 'rc' }}"
+      is_prerelease: "${{ inputs.prerelease || (inputs.prerelease-branch != '' && inputs.target-branch == inputs.prerelease-branch) || steps.tag-info.outputs.type == 'rc' }}"
       major: '${{ steps.release-please.outputs.major || steps.tag-info.outputs.major }}'
       minor: '${{ steps.release-please.outputs.minor || steps.tag-info.outputs.minor }}'
       patch: '${{ steps.release-please.outputs.patch || steps.tag-info.outputs.patch }}'
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:

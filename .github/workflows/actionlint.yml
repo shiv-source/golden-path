@@ -8,11 +8,14 @@ on:
         type: string
         default: '1.7.12'
 
+permissions:
+  contents: read
+
 jobs:
   actionlint:
     name: Lint Workflows
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Install actionlint

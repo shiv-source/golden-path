@@ -20,16 +20,34 @@ on:
         type: string
         default: 'npm run build'
 
+permissions:
+  contents: read
+
 jobs:
+  setup:
+    name: Setup Shards
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      shards: '${{ steps.shards.outputs.shards }}'
+    steps:
+      - name: Generate shard list
+        id: shards
+        run: |
+          SHARDS=$(seq -s, 1 ${{ inputs.shard-count }})
+          echo "shards=[$SHARDS]" >> "$GITHUB_OUTPUT"
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '${{ inputs.node-version }}'
           cache: 'npm'
+          cache-dependency-path: '${{ inputs.working-directory }}/package-lock.json'
       - name: Install dependencies
         run: npm ci
         working-directory: '${{ inputs.working-directory }}'
@@ -40,12 +58,14 @@ jobs:
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '${{ inputs.node-version }}'
           cache: 'npm'
+          cache-dependency-path: '${{ inputs.working-directory }}/package-lock.json'
       - name: Install dependencies
         run: npm ci
         working-directory: '${{ inputs.working-directory }}'
@@ -55,34 +75,39 @@ jobs:
 
   test:
     name: Test (shard ${{ matrix.shard }})
+    needs: [setup]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON(format('[1,{0}]', inputs.shard-count)) }}
+        shard: ${{ fromJSON(needs.setup.outputs.shards) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '${{ inputs.node-version }}'
           cache: 'npm'
+          cache-dependency-path: '${{ inputs.working-directory }}/package-lock.json'
       - name: Install dependencies
         run: npm ci
         working-directory: '${{ inputs.working-directory }}'
       - name: Test
-        run: npm test -- --shard=${{ matrix.shard }}/${{ inputs.shard-count }}
+        run: npm test -- --test-shard=${{ matrix.shard }}/${{ inputs.shard-count }}
         working-directory: '${{ inputs.working-directory }}'
 
   build:
     name: Build
     needs: [lint, typecheck, test]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '${{ inputs.node-version }}'
           cache: 'npm'
+          cache-dependency-path: '${{ inputs.working-directory }}/package-lock.json'
       - name: Install dependencies
         run: npm ci
         working-directory: '${{ inputs.working-directory }}'

@@ -5,6 +5,10 @@ on:
   pull_request:
     branches: [main]
   workflow_call:
+
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -12,6 +16,7 @@ jobs:
   gate:
     if: github.repository == 'shiv-source/golden-path'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - run: echo "Running on golden-path repo"
 
@@ -19,7 +24,7 @@ jobs:
     name: Lint Scripts
     needs: [gate]
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -30,7 +35,7 @@ jobs:
     name: Test Scripts
     needs: [gate]
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,7 +46,7 @@ jobs:
     name: Format Check
     needs: [gate]
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
