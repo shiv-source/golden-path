@@ -35,17 +35,13 @@ inputs:
         required: false
         default: 'auto'
     registry-url:
-        description: 'npm registry URL; writes .npmrc (used with scope and always-auth)'
+        description: 'npm registry URL; writes .npmrc (used with scope)'
         required: false
         default: ''
     scope:
         description: 'npm scope to associate with the registry (e.g. @my-org)'
         required: false
         default: ''
-    always-auth:
-        description: 'Always authenticate against the registry (true/false)'
-        required: false
-        default: 'false'
     auth-token:
         description: 'npm registry token, exposed as NODE_AUTH_TOKEN during install. Pass secrets here, not literals.'
         required: false
@@ -101,7 +97,6 @@ runs:
               node-version-file: ${{ steps.node-version.outputs.node-version-file }}
               registry-url: ${{ inputs.registry-url }}
               scope: ${{ inputs.scope }}
-              always-auth: ${{ inputs.always-auth }}
           env:
               NODE_AUTH_TOKEN: ${{ inputs.auth-token }}
 
