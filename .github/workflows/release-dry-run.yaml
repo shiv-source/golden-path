@@ -1,0 +1,65 @@
+name: 'Release Dry-Run'
+
+on:
+    workflow_call:
+        inputs:
+            target-branch:
+                description: 'Branch to validate against'
+                type: string
+                default: 'main'
+            release-type:
+                description: 'Release-please release type (simple, node, go, python, java)'
+                type: string
+                default: 'simple'
+        outputs:
+            version:
+                description: 'Predicted version if a release would be created'
+                value: '${{ jobs.validate.outputs.version }}'
+            release_created:
+                description: 'Whether commits would trigger a release'
+                value: '${{ jobs.validate.outputs.release_created }}'
+
+permissions:
+    contents: read
+    pull-requests: read
+
+jobs:
+    validate:
+        name: Validate Release
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        outputs:
+            version: "${{ (steps.release-please.outputs.major) && format('{0}.{1}.{2}', steps.release-please.outputs.major, steps.release-please.outputs.minor, steps.release-please.outputs.patch) || '' }}"
+            release_created: '${{ steps.release-please.outputs.release_created }}'
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+              with:
+                  fetch-depth: 0
+
+            - name: Dry-run release-please
+              id: release-please
+              # googleapis/release-please-action@v5.0.0
+              uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7
+              with:
+                  target-branch: '${{ inputs.target-branch }}'
+                  release-type: '${{ inputs.release-type }}'
+                  dry-run: true
+
+            - name: Report
+              run: |
+                  if [ "${{ steps.release-please.outputs.release_created }}" = "true" ]; then
+                    VERSION="${{ steps.release-please.outputs.major }}.${{ steps.release-please.outputs.minor }}.${{ steps.release-please.outputs.patch }}"
+                    {
+                      echo '## :rocket: Release Validation'
+                      echo "**Predicted version:** \`$VERSION\`"
+                      echo "**Release type:** ${{ steps.release-please.outputs.release_type || 'unknown' }}"
+                      echo ''
+                      echo 'Conventional commits are valid. A release would be created on merge.'
+                    } >> "$GITHUB_STEP_SUMMARY"
+                  else
+                    {
+                      echo '## :information_source: Release Validation'
+                      echo 'No release would be created. No conventional commits requiring a version bump found.'
+                    } >> "$GITHUB_STEP_SUMMARY"
+                  fi

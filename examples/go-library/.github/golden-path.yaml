@@ -1,0 +1,38 @@
+version: 2
+
+go:
+    - working-directory: .
+      go-version-file: go.mod
+      change-detection:
+          enabled: true
+          paths:
+              - '**/*.go'
+              - go.mod
+              - go.sum
+              - .golangci.yaml
+              - '.github/'
+      coverage-floor: 90
+      cross-compile:
+          enabled: true
+          goos: [linux, darwin, windows]
+          goarch: [amd64, arm64]
+      lint:
+          golangci-lint-version: v2.13.1
+          config: .golangci.yaml
+          timeout: 5m
+          args: ''
+      final-gate: true
+
+security-scan:
+    enabled: true
+    language: go
+
+secret-scan:
+    enabled: true
+    tool: betterleaks
+
+codespell:
+    enabled: true
+
+actionlint:
+    enabled: true

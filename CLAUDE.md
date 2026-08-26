@@ -23,7 +23,7 @@ golden-path/
 │       ├── coverage-gate/         # @golden-path/action-coverage-gate
 │       └── final-gate/            # @golden-path/action-final-gate
 ├── .github/
-│   ├── actions/                   # action.yml manifests + committed dist/index.cjs bundles
+│   ├── actions/                   # action.yaml manifests + committed dist/index.cjs bundles
 │   ├── workflows/                 # reusable + CI workflows
 │   ├── ISSUE_TEMPLATE/            # Repository onboarding form
 │   └── PULL_REQUEST_TEMPLATE.md
@@ -91,20 +91,20 @@ All reusable workflows live in `.github/workflows/`. Every script is consumed by
 
 ### Key Workflows
 
-| Workflow                      | Type                 | Purpose                                                                |
-| ----------------------------- | -------------------- | ---------------------------------------------------------------------- |
-| `self-ci.yml`                 | Triggered + reusable | Lint, typecheck, test, format, actionlint, dist-staleness, secret-scan |
-| `golden-path-ci.yml`          | Reusable (entry)     | Config-driven CI orchestrator                                          |
-| `build-test-go.yml`           | Reusable             | Go CI (lint → vet → test → build)                                      |
-| `release-github.yml`          | Reusable             | GitHub Release (tag-driven or release-please)                          |
-| `release-npm.yml`             | Reusable             | npm publish                                                            |
-| `release-github-npm.yml`      | Reusable             | GitHub Release → npm publish                                           |
-| `build-test-node.yml`         | Reusable             | Node.js CI (lint → typecheck → test → build)                           |
-| `codespell.yml`               | Reusable             | Spell check                                                            |
-| `secret-scan-betterleaks.yml` | Reusable             | Secret scanning                                                        |
-| `actionlint.yml`              | Reusable             | Workflow linting                                                       |
-| `repository-onboarding.yml`   | Triggered            | Issue → validate → config → PR                                         |
-| `apply-repository-config.yml` | Triggered            | Profile merge → PR into target repo                                    |
+| Workflow                       | Type                 | Purpose                                                                |
+| ------------------------------ | -------------------- | ---------------------------------------------------------------------- |
+| `self-ci.yaml`                 | Triggered + reusable | Lint, typecheck, test, format, actionlint, dist-staleness, secret-scan |
+| `golden-path-ci.yaml`          | Reusable (entry)     | Config-driven CI orchestrator                                          |
+| `build-test-go.yaml`           | Reusable             | Go CI (lint → vet → test → build)                                      |
+| `release-github.yaml`          | Reusable             | GitHub Release (tag-driven or release-please)                          |
+| `release-npm.yaml`             | Reusable             | npm publish                                                            |
+| `release-github-npm.yaml`      | Reusable             | GitHub Release → npm publish                                           |
+| `build-test-node.yaml`         | Reusable             | Node.js CI (lint → typecheck → test → build)                           |
+| `codespell.yaml`               | Reusable             | Spell check                                                            |
+| `secret-scan-betterleaks.yaml` | Reusable             | Secret scanning                                                        |
+| `actionlint.yaml`              | Reusable             | Workflow linting                                                       |
+| `repository-onboarding.yaml`   | Triggered            | Issue → validate → config → PR                                         |
+| `apply-repository-config.yaml` | Triggered            | Profile merge → PR into target repo                                    |
 
 ### TypeScript Actions
 

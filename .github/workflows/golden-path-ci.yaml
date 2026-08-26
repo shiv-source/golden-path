@@ -1,0 +1,115 @@
+name: 'Golden Path CI'
+
+on:
+    workflow_call:
+        inputs:
+            config-path:
+                description: 'Path to the golden-path config file'
+                type: string
+                default: '.github/golden-path.yaml'
+
+permissions:
+    contents: read
+
+jobs:
+    config:
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        outputs:
+            config: ${{ steps.parse.outputs.config }}
+            go: ${{ toJSON(fromJSON(steps.parse.outputs.config).go) }}
+            node: ${{ toJSON(fromJSON(steps.parse.outputs.config).node) }}
+            security_enabled: ${{ steps.parse.outputs.security_enabled }}
+            secret_scan_enabled: ${{ steps.parse.outputs.secret_scan_enabled }}
+            codespell_enabled: ${{ steps.parse.outputs.codespell_enabled }}
+            actionlint_enabled: ${{ steps.parse.outputs.actionlint_enabled }}
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - name: Parse golden-path config
+              id: parse
+              uses: shiv-source/golden-path/.github/actions/parse-config@main
+              with:
+                  config-path: ${{ inputs.config-path }}
+
+    # One Go/Node gate per configured target (each target has its own working
+    # directory and overrides). Presence in the config list enables the gate.
+    go:
+        needs: [config]
+        if: needs.config.outputs.go != '[]'
+        strategy:
+            fail-fast: false
+            matrix:
+                target: ${{ fromJSON(needs.config.outputs.go) }}
+        uses: shiv-source/golden-path/.github/workflows/build-test-go.yaml@main
+        with:
+            working-directory: ${{ matrix.target.working_directory }}
+            go-version: ${{ matrix.target.go_version }}
+            go-version-file: ${{ matrix.target.go_version_file }}
+            coverage-floor: ${{ matrix.target.coverage_floor }}
+            cross-compile: ${{ matrix.target.cross_compile.enabled }}
+            goos: ${{ toJSON(matrix.target.cross_compile.goos) }}
+            goarch: ${{ toJSON(matrix.target.cross_compile.goarch) }}
+            change-detection: ${{ matrix.target.change_detection.enabled }}
+            change-paths: ${{ toJSON(matrix.target.change_detection.paths) }}
+            golangci-lint-version: ${{ matrix.target.lint.golangci_lint_version }}
+            golangci-lint-config: ${{ matrix.target.lint.config }}
+            golangci-lint-timeout: ${{ matrix.target.lint.timeout }}
+            golangci-lint-args: ${{ matrix.target.lint.args }}
+            final-gate: ${{ matrix.target.final_gate }}
+
+    node:
+        needs: [config]
+        if: needs.config.outputs.node != '[]'
+        strategy:
+            fail-fast: false
+            matrix:
+                target: ${{ fromJSON(needs.config.outputs.node) }}
+        uses: shiv-source/golden-path/.github/workflows/build-test-node.yaml@main
+        with:
+            working-directory: ${{ matrix.target.working_directory }}
+            node-version: ${{ matrix.target.node_version }}
+            package-manager: ${{ matrix.target.package_manager }}
+            shard-count: ${{ matrix.target.shard_count }}
+            lint-command: ${{ matrix.target.lint_command }}
+            typecheck-command: ${{ matrix.target.typecheck_command }}
+            test-command: ${{ matrix.target.test_command }}
+            build-command: ${{ matrix.target.build_command }}
+
+    security:
+        needs: [config]
+        if: needs.config.outputs.security_enabled == 'true'
+        permissions:
+            contents: read
+            security-events: write
+        uses: shiv-source/golden-path/.github/workflows/security-scan.yaml@main
+        with:
+            language: ${{ fromJSON(needs.config.outputs.config).security_scan.language }}
+        secrets: inherit
+
+    secret-scan:
+        needs: [config]
+        if: needs.config.outputs.secret_scan_enabled == 'true'
+        uses: shiv-source/golden-path/.github/workflows/secret-scan-betterleaks.yaml@main
+        secrets: inherit
+
+    codespell:
+        needs: [config]
+        if: needs.config.outputs.codespell_enabled == 'true'
+        uses: shiv-source/golden-path/.github/workflows/codespell.yaml@main
+
+    actionlint:
+        needs: [config]
+        if: needs.config.outputs.actionlint_enabled == 'true'
+        uses: shiv-source/golden-path/.github/workflows/actionlint.yaml@main
+
+    final-gate:
+        needs: [config, go, node, security, secret-scan, codespell, actionlint]
+        if: ${{ always() }}
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - name: Aggregate results
+              uses: shiv-source/golden-path/.github/actions/final-gate@main
+              with:
+                  results: ${{ format('go={0} node={1} security={2} secret-scan={3} codespell={4} actionlint={5}', needs.go.result, needs.node.result, needs.security.result, needs.secret-scan.result, needs.codespell.result, needs.actionlint.result) }}

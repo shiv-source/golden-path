@@ -1,0 +1,41 @@
+name: 'Dependency Auto-Merge'
+
+on:
+    workflow_call:
+        inputs:
+            package-ecosystem:
+                description: 'Package ecosystem (npm, go, pip, maven)'
+                type: string
+                default: 'npm'
+            auto-merge:
+                description: 'Auto-merge non-breaking dependency updates'
+                type: boolean
+                default: true
+        outputs:
+            update_type:
+                description: 'Semver bump type from Dependabot (version-update:semver-patch|minor|major)'
+                value: '${{ jobs.auto-merge.outputs.update_type }}'
+            is_auto_merged:
+                description: 'Whether the PR was approved and auto-merged'
+                value: '${{ jobs.auto-merge.outputs.is_auto_merged }}'
+
+permissions:
+    contents: write
+    pull-requests: write
+
+jobs:
+    auto-merge:
+        name: Dependabot Auto-Merge
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        outputs:
+            update_type: '${{ steps.merge.outputs.update_type }}'
+            is_auto_merged: '${{ steps.merge.outputs.is_auto_merged }}'
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - id: merge
+              uses: shiv-source/golden-path/.github/actions/dependabot-auto-merge@main
+              with:
+                  auto-merge: ${{ inputs.auto-merge }}

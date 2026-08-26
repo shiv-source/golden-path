@@ -6,7 +6,7 @@ usage() {
 Usage: ./scripts/release.sh <major|minor|patch>
 
   Bumps the version from the latest git tag, creates a new tag,
-  and pushes it to trigger self-release.yml.
+  and pushes it to trigger self-release.yaml.
 
 Examples:
   ./scripts/release.sh patch   # v1.0.0 → v1.0.1
@@ -48,7 +48,7 @@ bump() {
     local tag="v0.1.0"
     git tag -a "$tag" -m "chore: release $tag"
     git push origin "$tag"
-    echo "Tag $tag pushed. self-release.yml will create the GitHub Release."
+    echo "Tag $tag pushed. self-release.yaml will create the GitHub Release."
     exit 0
   fi
 
@@ -81,7 +81,7 @@ bump() {
   git push origin "$new_tag"
 
   echo ""
-  echo "Tag $new_tag pushed. self-release.yml will create the GitHub Release."
+  echo "Tag $new_tag pushed. self-release.yaml will create the GitHub Release."
 }
 
 bump "$@"

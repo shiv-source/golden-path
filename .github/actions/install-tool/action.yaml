@@ -1,0 +1,88 @@
+name: 'Install Tool'
+description: 'Download a pinned binary from a GitHub release, cache it under ~/.local/bin, and add it to PATH. Shared by lint-go, actionlint, and betterleaks.'
+
+inputs:
+    repo:
+        description: 'Owner/repo of the tool (e.g. golangci/golangci-lint)'
+        required: true
+    version:
+        description: 'Release tag exactly as it appears in the download URL (e.g. v2.13.1)'
+        required: true
+    asset:
+        description: 'Asset filename template. Placeholders: {version}, {version-no-v}, {os}, {arch}'
+        required: true
+    binary:
+        description: 'Executable name inside the archive'
+        required: true
+    os:
+        description: 'Runner OS used for {os} placeholder'
+        required: false
+        default: 'linux'
+    arch:
+        description: 'Architecture used for {arch} placeholder'
+        required: false
+        default: 'amd64'
+    cache:
+        description: 'Restore and save the downloaded binary (true/false)'
+        required: false
+        default: 'true'
+
+outputs:
+    path:
+        description: 'Directory containing the installed binary'
+        value: ${{ steps.paths.outputs.bin-dir }}
+
+runs:
+    using: composite
+    steps:
+        - id: paths
+          name: Compute install paths
+          shell: bash
+          run: |
+              echo "bin-dir=$HOME/.local/bin" >> "$GITHUB_OUTPUT"
+              # Binaries live under ~/.local/tools so the ~/.local/bin/<binary>
+              # symlink never collides with a repo-named subdirectory.
+              echo "tool-dir=$HOME/.local/tools/${{ inputs.repo }}/${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+
+        - id: cache
+          name: Restore tool binary
+          if: inputs.cache == 'true'
+          # actions/cache@v6.1.0
+          uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+          with:
+              path: ${{ steps.paths.outputs.tool-dir }}
+              key: ${{ runner.os }}-tool-${{ inputs.repo }}-${{ inputs.version }}-${{ inputs.binary }}
+              restore-keys: |
+                  ${{ runner.os }}-tool-${{ inputs.repo }}-
+
+        - id: install
+          name: Install ${{ inputs.binary }}
+          shell: bash
+          run: |
+              set -euo pipefail
+              tool_dir="${{ steps.paths.outputs.tool-dir }}"
+              bin_dir="${{ steps.paths.outputs.bin-dir }}"
+              binary="${{ inputs.binary }}"
+
+              if [ ! -x "$tool_dir/$binary" ]; then
+                tmp="$(mktemp -d)"
+                trap 'rm -rf "$tmp"' EXIT
+                v="${{ inputs.version }}"
+                vn="${v#v}"
+                asset="${{ inputs.asset }}"
+                asset="${asset//\{version\}/$v}"
+                asset="${asset//\{version-no-v\}/$vn}"
+                asset="${asset//\{os\}/${{ inputs.os }}}"
+                asset="${asset//\{arch\}/${{ inputs.arch }}}"
+                mkdir -p "$tool_dir"
+                curl -fsSL "https://github.com/${{ inputs.repo }}/releases/download/$v/$asset" -o "$tmp/pkg.tar.gz"
+                tar xzf "$tmp/pkg.tar.gz" -C "$tmp"
+                bin="$(find "$tmp" -type f -name "$binary" -print -quit)"
+                [ -n "$bin" ] || { echo "::error::$binary not found in release asset $asset"; exit 1; }
+                cp "$bin" "$tool_dir/$binary"
+                chmod +x "$tool_dir/$binary"
+              fi
+
+              mkdir -p "$bin_dir"
+              ln -sf "$tool_dir/$binary" "$bin_dir/$binary"
+              echo "$bin_dir" >> "$GITHUB_PATH"

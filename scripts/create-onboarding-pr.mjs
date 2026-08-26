@@ -32,7 +32,7 @@ export async function createOnboardingPR({ repoName, language, type, profiles })
             '',
             `Generated \`repositories/${repoName}.yaml\`.`,
             '',
-            'Once merged, `apply-repository-config.yml` will apply the standard configuration.',
+            'Once merged, `apply-repository-config.yaml` will apply the standard configuration.',
         ].join('\n'),
     });
 }

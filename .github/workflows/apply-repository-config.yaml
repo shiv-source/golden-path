@@ -1,0 +1,111 @@
+name: 'Apply Repository Configuration'
+on:
+    push:
+        branches: [main]
+        paths:
+            - 'repositories/**'
+    workflow_dispatch:
+        inputs:
+            repo:
+                description: 'Repository to apply config to (owner/name)'
+                type: string
+                required: true
+
+jobs:
+    detect:
+        name: Detect Target Repos
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        outputs:
+            repos: '${{ steps.detect.outputs.repos }}'
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+              with:
+                  fetch-depth: 0
+            - name: Detect
+              id: detect
+              # actions/github-script@v7
+              uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+              with:
+                  script: |
+                      if ('${{ github.event_name }}' === 'workflow_dispatch') {
+                        core.setOutput('repos', JSON.stringify(['${{ inputs.repo }}']));
+                      } else {
+                        const { getChangedRepos } = await import(
+                          '${{ github.workspace }}/scripts/get-changed-repos.mjs'
+                        );
+                        const before = context.payload.before || 'HEAD~1';
+                        const after = context.payload.after || 'HEAD';
+                        core.setOutput('repos', JSON.stringify(getChangedRepos(before, after)));
+                      }
+
+    apply:
+        name: Apply Configuration
+        needs: [detect]
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        permissions:
+            contents: write
+            pull-requests: write
+        strategy:
+            fail-fast: false
+            matrix:
+                repo: '${{ fromJSON(needs.detect.outputs.repos) }}'
+
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+            - name: Apply config to target repo
+              id: merge
+              env:
+                  GH_TOKEN: '${{ secrets.BOT_TOKEN || github.token }}'
+              # actions/github-script@v7
+              uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+              with:
+                  script: |
+                      const { applyConfig } = await import(
+                        '${{ github.workspace }}/scripts/apply-config.mjs'
+                      );
+                      const repoName = '${{ matrix.repo }}'.includes('/')
+                        ? '${{ matrix.repo }}'.split('/').pop()
+                        : '${{ matrix.repo }}';
+                      const org = '${{ matrix.repo }}'.includes('/')
+                        ? '${{ matrix.repo }}'.split('/')[0]
+                        : '${{ github.repository_owner }}';
+                      const result = applyConfig({
+                        workspace: process.env.GITHUB_WORKSPACE,
+                        repoName,
+                        targetRepo: '${{ matrix.repo }}'.includes('/')
+                          ? '${{ matrix.repo }}'
+                          : `${org}/${{ matrix.repo }}`,
+                        org,
+                      });
+                      core.setOutput('profiles', JSON.stringify(result.profiles));
+                      core.setOutput('filesCopied', String(result.filesCopied));
+                      core.setOutput('conflictsFound', String(result.conflictsFound));
+                      core.setOutput('conflictsList', result.conflictsList);
+
+            - name: Create PR in target repo
+              id: pr
+              env:
+                  GH_TOKEN: '${{ secrets.BOT_TOKEN || github.token }}'
+              # actions/github-script@v7
+              uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+              with:
+                  script: |
+                      const { createApplyPR } = await import(
+                        '${{ github.workspace }}/scripts/create-apply-pr.mjs'
+                      );
+                      const path = require('node:path');
+                      const result = await createApplyPR({
+                        targetDir: path.join(process.env.GITHUB_WORKSPACE, 'target-repo'),
+                        repo: '${{ matrix.repo }}'.includes('/')
+                          ? '${{ matrix.repo }}'
+                          : '${{ github.repository_owner }}/${{ matrix.repo }}',
+                        filesCopied: Number('${{ steps.merge.outputs.filesCopied }}'),
+                        conflictsFound: '${{ steps.merge.outputs.conflictsFound }}' === 'true',
+                        conflictsList: '${{ steps.merge.outputs.conflictsList }}',
+                      });
+                      if (result.url) core.setOutput('prUrl', result.url);

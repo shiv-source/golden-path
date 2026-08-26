@@ -1,0 +1,17 @@
+name: CI
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+permissions:
+    contents: read
+    security-events: write
+
+jobs:
+    golden-path:
+        uses: shiv-source/golden-path/.github/workflows/golden-path-ci.yaml@v1
+        with:
+            config-path: .github/golden-path.yaml
+        secrets: inherit

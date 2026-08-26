@@ -1,0 +1,40 @@
+# Golden Path CI configuration.
+# Drives the reusable checks provided by shiv-source/golden-path.
+# See: https://github.com/shiv-source/golden-path
+
+version: 1
+
+language: go
+
+go:
+    enabled: true
+    go-version-file: go.mod
+    working-directory: .
+    change-detection:
+        enabled: true
+        paths:
+            - '**/*.go'
+            - 'go.mod'
+            - 'go.sum'
+            - '.golangci.yaml'
+            - '.github/'
+    coverage-floor: 0
+    cross-compile:
+        enabled: true
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+    final-gate: true
+
+security-scan:
+    enabled: true
+    language: go
+
+secret-scan:
+    enabled: true
+    tool: betterleaks
+
+codespell:
+    enabled: true
+
+actionlint:
+    enabled: true

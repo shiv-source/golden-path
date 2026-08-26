@@ -1,0 +1,26 @@
+version: 2
+
+node:
+    - working-directory: .
+      node-version: '22'
+      package-manager: auto
+      shard-count: 3
+      lint-command: npm run lint
+      typecheck-command: npm run typecheck
+      test-command: npm test
+      build-command: npm run build
+      final-gate: true
+
+security-scan:
+    enabled: true
+    language: node
+
+secret-scan:
+    enabled: true
+    tool: betterleaks
+
+codespell:
+    enabled: true
+
+actionlint:
+    enabled: true

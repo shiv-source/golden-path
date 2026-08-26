@@ -1,0 +1,21 @@
+name: Release
+on:
+    workflow_dispatch:
+    push:
+        branches: [main]
+        tags: ['v*']
+
+permissions:
+    contents: write
+    packages: write
+    id-token: write
+
+jobs:
+    release:
+        uses: shiv-source/golden-path/.github/workflows/release-github-npm.yaml@v1
+        with:
+            npm-registry: https://registry.npmjs.org
+            node-version: '22'
+            generate-release-notes: true
+        secrets:
+            NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

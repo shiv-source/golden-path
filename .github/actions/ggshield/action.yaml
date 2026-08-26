@@ -1,0 +1,43 @@
+name: 'Ggshield'
+description: 'Install a pinned ggshield version and run a GitGuardian secret scan.'
+
+inputs:
+    version:
+        description: 'ggshield version (pip installable)'
+        required: false
+        default: '1.38.0'
+    path:
+        description: 'Path to scan (defaults to entire repo)'
+        required: false
+        default: '.'
+    args:
+        description: 'Extra ggshield arguments'
+        required: false
+        default: ''
+    api-key:
+        description: 'GitGuardian API key for secret detection (pass a secret)'
+        required: true
+
+runs:
+    using: composite
+    steps:
+        - name: Install Python
+          # actions/setup-python@v7.0.0
+          uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+          with:
+              python-version: '3.12'
+
+        - name: Install uv and ggshield
+          shell: bash
+          run: |
+              pip install uv
+              uv pip install --system ggshield==${{ inputs.version }}
+
+        - name: Run ggshield
+          shell: bash
+          env:
+              GITGUARDIAN_API_KEY: ${{ inputs.api-key }}
+          run: |
+              ggshield secret scan ci \
+                ${{ inputs.path }} \
+                ${{ inputs.args }}

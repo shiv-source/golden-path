@@ -1,0 +1,123 @@
+name: CI
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+    workflow_call:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+jobs:
+    gate:
+        if: github.repository == 'shiv-source/golden-path'
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - run: echo "Running on golden-path repo"
+
+    lint:
+        name: Lint + Typecheck
+        needs: [gate]
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - uses: ./.github/actions/setup-node
+              with:
+                  node-version: '22'
+                  package-manager: pnpm
+                  package-manager-version: '11'
+            - run: pnpm run lint
+            - run: pnpm typecheck
+    test:
+        name: Test
+        needs: [gate]
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - uses: ./.github/actions/setup-node
+              with:
+                  node-version: '22'
+                  package-manager: pnpm
+                  package-manager-version: '11'
+            - run: pnpm test
+    dist:
+        name: Actions bundle up to date
+        needs: [gate]
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - uses: ./.github/actions/setup-node
+              with:
+                  node-version: '22'
+                  package-manager: pnpm
+                  package-manager-version: '11'
+            - run: pnpm build:actions
+            - name: Assert committed bundles are current
+              run: |
+                  if ! git diff --quiet -- .github/actions/ || [ -n "$(git status --porcelain -- .github/actions/)" ]; then
+                    echo "::error::Action bundles are stale. Run 'pnpm run build:actions' and commit the result."
+                    git status --porcelain -- .github/actions/
+                    exit 1
+                  fi
+    governance:
+        name: Governance (pins + generated types)
+        needs: [gate]
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - uses: ./.github/actions/setup-node
+              with:
+                  node-version: '22'
+                  package-manager: pnpm
+                  package-manager-version: '11'
+            - name: Assert generated types are current
+              run: pnpm gen:types --check
+            - name: Assert third-party actions are SHA-pinned
+              run: node scripts/check-action-pins.mjs
+    format:
+        name: Format Check
+        needs: [gate]
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - uses: ./.github/actions/setup-node
+              with:
+                  node-version: '22'
+                  package-manager: pnpm
+                  package-manager-version: '11'
+            - run: pnpm run format:check
+    actionlint:
+        name: Workflow Lint
+        needs: [gate]
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - uses: ./.github/actions/actionlint
+    secret-scan:
+        name: Secret Scan
+        needs: [gate]
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+              with:
+                  fetch-depth: 0
+            - uses: ./.github/actions/betterleaks

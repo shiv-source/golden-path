@@ -1,0 +1,61 @@
+name: 'Actionlint'
+description: 'Install a pinned actionlint binary (cached) and lint GitHub Actions workflows.'
+
+inputs:
+    version:
+        description: 'actionlint release tag to install'
+        required: false
+        default: 'v1.7.12'
+    config:
+        description: 'Path to an actionlint config file'
+        required: false
+        default: ''
+    args:
+        description: 'Extra actionlint arguments'
+        required: false
+        default: '-color'
+    cache:
+        description: 'Cache the actionlint binary (true/false)'
+        required: false
+        default: 'true'
+
+runs:
+    using: composite
+    steps:
+        - id: os-arch
+          name: Map runner to actionlint asset names
+          shell: bash
+          run: |
+              case "${{ runner.os }}" in
+                macOS) os=macos ;;
+                Windows) os=windows ;;
+                *) os=linux ;;
+              esac
+              case "${{ runner.arch }}" in
+                ARM64) arch=arm64 ;;
+                *) arch=amd64 ;;
+              esac
+              echo "os=$os" >> "$GITHUB_OUTPUT"
+              echo "arch=$arch" >> "$GITHUB_OUTPUT"
+
+        - name: Install actionlint
+          uses: $/.github/actions/install-tool
+          with:
+              repo: rhysd/actionlint
+              version: ${{ inputs.version }}
+              asset: actionlint_{version-no-v}_{os}_{arch}.tar.gz
+              binary: actionlint
+              os: ${{ steps.os-arch.outputs.os }}
+              arch: ${{ steps.os-arch.outputs.arch }}
+              cache: ${{ inputs.cache }}
+
+        - name: Run actionlint
+          shell: bash
+          run: |
+              set -euo pipefail
+              config="${{ inputs.config }}"
+              if [ -n "$config" ]; then
+                actionlint -config-file "$config" ${{ inputs.args }}
+              else
+                actionlint ${{ inputs.args }}
+              fi

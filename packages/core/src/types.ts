@@ -1,45 +1,25 @@
-export interface CrossCompileConfig {
-    enabled: boolean;
-    goos: string[];
-    goarch: string[];
-}
+import type * as Generated from './types.generated';
 
-export interface ChangeDetectionConfig {
-    enabled: boolean;
-    paths: string[];
-}
+// The schema's generated types describe the *raw* config (every key optional).
+// The normalized config is always fully populated (deepMerge fills defaults),
+// so these Strict* aliases derive required, deeply-nested shapes from the
+// schema types — keeping the schema as the single source of truth.
 
-export interface GoConfig {
-    enabled: boolean;
-    go_version: string;
-    go_version_file: string;
-    working_directory: string;
-    change_detection: ChangeDetectionConfig;
-    coverage_floor: number;
-    cross_compile: CrossCompileConfig;
-    final_gate: boolean;
-}
+export type RequiredDeep<T> = T extends readonly unknown[]
+    ? T
+    : T extends object
+      ? { [K in keyof T]-?: RequiredDeep<T[K]> }
+      : T;
 
-export interface ScanConfig {
-    enabled: boolean;
-    language: string;
-}
+export type GoldenPathConfig = RequiredDeep<Generated.GoldenPathConfig>;
+export type GoTarget = RequiredDeep<Generated.GoTarget>;
+export type NodeTarget = RequiredDeep<Generated.NodeTarget>;
+export type LintConfig = RequiredDeep<Generated.LintConfig>;
+export type ChangeDetectionConfig = RequiredDeep<Generated.ChangeDetection>;
+export type CrossCompileConfig = RequiredDeep<Generated.CrossCompile>;
+export type ScanConfig = RequiredDeep<Generated.ScanConfig>;
+export type SecretScanConfig = RequiredDeep<Generated.SecretScanConfig>;
+export type FlagConfig = RequiredDeep<Generated.FlagConfig>;
 
-export interface SecretScanConfig {
-    enabled: boolean;
-    tool: string;
-}
-
-export interface FlagConfig {
-    enabled: boolean;
-}
-
-export interface GoldenPathConfig {
-    version: number;
-    language: string;
-    go: GoConfig;
-    security_scan: ScanConfig;
-    secret_scan: SecretScanConfig;
-    codespell: FlagConfig;
-    actionlint: FlagConfig;
-}
+/** Raw, un-normalized config as accepted by the JSON Schema (keys optional). */
+export type ConfigInput = Generated.GoldenPathConfig;
