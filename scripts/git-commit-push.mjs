@@ -10,9 +10,9 @@ import { execSync } from 'node:child_process';
 const silent = { stdio: 'pipe' };
 
 export function configureGit(cwd) {
-  const opts = { ...silent, ...(cwd ? { cwd } : {}) };
-  execSync('git config user.name "github-actions[bot]"', opts);
-  execSync('git config user.email "github-actions[bot]@users.noreply.github.com"', opts);
+    const opts = { ...silent, ...(cwd ? { cwd } : {}) };
+    execSync('git config user.name "github-actions[bot]"', opts);
+    execSync('git config user.email "github-actions[bot]@users.noreply.github.com"', opts);
 }
 
 /**
@@ -25,27 +25,27 @@ export function configureGit(cwd) {
  * @returns {{ pushed: boolean, skipped: boolean }}
  */
 export function commitAndPush(opts) {
-  const { branch, message, cwd, files } = opts;
-  const options = { ...silent, ...(cwd ? { cwd } : {}) };
+    const { branch, message, cwd, files } = opts;
+    const options = { ...silent, ...(cwd ? { cwd } : {}) };
 
-  execSync(`git checkout -b "${branch}"`, options);
+    execSync(`git checkout -b "${branch}"`, options);
 
-  if (files) {
-    execSync(`git add ${files}`, options);
-  } else {
-    execSync('git add -A', options);
-  }
+    if (files) {
+        execSync(`git add ${files}`, options);
+    } else {
+        execSync('git add -A', options);
+    }
 
-  try {
-    execSync(`git commit -m "${message}"`, options);
-  } catch {
-    return { pushed: false, skipped: true };
-  }
+    try {
+        execSync(`git commit -m "${message}"`, options);
+    } catch {
+        return { pushed: false, skipped: true };
+    }
 
-  try {
-    execSync(`git push origin "${branch}" --force`, options);
-    return { pushed: true, skipped: false };
-  } catch {
-    return { pushed: false, skipped: false };
-  }
+    try {
+        execSync(`git push origin "${branch}" --force`, options);
+        return { pushed: true, skipped: false };
+    } catch {
+        return { pushed: false, skipped: false };
+    }
 }

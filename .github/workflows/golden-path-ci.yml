@@ -1,0 +1,87 @@
+name: 'Golden Path CI'
+
+on:
+    workflow_call:
+        inputs:
+            config-path:
+                description: 'Path to the golden-path config file'
+                type: string
+                default: '.github/golden-path.yml'
+
+permissions:
+    contents: read
+
+jobs:
+    config:
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        outputs:
+            config: ${{ steps.parse.outputs.config }}
+            language: ${{ steps.parse.outputs.language }}
+            go_enabled: ${{ steps.parse.outputs.go_enabled }}
+            security_enabled: ${{ steps.parse.outputs.security_enabled }}
+            secret_scan_enabled: ${{ steps.parse.outputs.secret_scan_enabled }}
+            codespell_enabled: ${{ steps.parse.outputs.codespell_enabled }}
+            actionlint_enabled: ${{ steps.parse.outputs.actionlint_enabled }}
+        steps:
+            - uses: actions/checkout@v4
+            - name: Parse golden-path config
+              id: parse
+              uses: shiv-source/golden-path/.github/actions/parse-config@main
+              with:
+                  config-path: ${{ inputs.config-path }}
+
+    go:
+        needs: [config]
+        if: needs.config.outputs.go_enabled == 'true'
+        uses: shiv-source/golden-path/.github/workflows/build-test-go.yml@main
+        with:
+            go-version: ${{ fromJSON(needs.config.outputs.config).go.go_version }}
+            go-version-file: ${{ fromJSON(needs.config.outputs.config).go.go_version_file }}
+            working-directory: ${{ fromJSON(needs.config.outputs.config).go.working_directory }}
+            coverage-floor: ${{ fromJSON(needs.config.outputs.config).go.coverage_floor }}
+            cross-compile: ${{ fromJSON(needs.config.outputs.config).go.cross_compile.enabled }}
+            goos: ${{ toJSON(fromJSON(needs.config.outputs.config).go.cross_compile.goos) }}
+            goarch: ${{ toJSON(fromJSON(needs.config.outputs.config).go.cross_compile.goarch) }}
+            change-detection: ${{ fromJSON(needs.config.outputs.config).go.change_detection.enabled }}
+            change-paths: ${{ toJSON(fromJSON(needs.config.outputs.config).go.change_detection.paths) }}
+            final-gate: ${{ fromJSON(needs.config.outputs.config).go.final_gate }}
+
+    security:
+        needs: [config]
+        if: needs.config.outputs.security_enabled == 'true'
+        permissions:
+            contents: read
+            security-events: write
+        uses: shiv-source/golden-path/.github/workflows/security-scan.yml@main
+        with:
+            language: ${{ fromJSON(needs.config.outputs.config).security_scan.language }}
+        secrets: inherit
+
+    secret-scan:
+        needs: [config]
+        if: needs.config.outputs.secret_scan_enabled == 'true'
+        uses: shiv-source/golden-path/.github/workflows/secret-scan-betterleaks.yml@main
+        secrets: inherit
+
+    codespell:
+        needs: [config]
+        if: needs.config.outputs.codespell_enabled == 'true'
+        uses: shiv-source/golden-path/.github/workflows/codespell.yml@main
+
+    actionlint:
+        needs: [config]
+        if: needs.config.outputs.actionlint_enabled == 'true'
+        uses: shiv-source/golden-path/.github/workflows/actionlint.yml@main
+
+    final-gate:
+        needs: [config, go, security, secret-scan, codespell, actionlint]
+        if: ${{ always() }}
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - name: Aggregate results
+              uses: shiv-source/golden-path/.github/actions/final-gate@main
+              with:
+                  results: ${{ format('go={0} security={1} secret-scan={2} codespell={3} actionlint={4}', needs.go.result, needs.security.result, needs.secret-scan.result, needs.codespell.result, needs.actionlint.result) }}
+                  coverage: ${{ needs.go.outputs.coverage }}

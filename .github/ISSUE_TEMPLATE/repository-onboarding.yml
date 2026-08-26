@@ -3,42 +3,42 @@ description: Request standardized configuration for a new or existing repository
 title: '[Onboarding]: '
 labels: [onboarding]
 body:
-  - type: input
-    id: repo-name
-    attributes:
-      label: Repository Name
-      description: The full name of the repository (e.g., my-service).
-    validations:
-      required: true
-  - type: dropdown
-    id: repo-type
-    attributes:
-      label: Repository Type
-      options:
-        - service
-        - library
-        - frontend
-        - CLI
-        - documentation
-    validations:
-      required: true
-  - type: dropdown
-    id: language
-    attributes:
-      label: Programming Language
-      options:
-        - Node.js
-        - Go
-        - Python
-        - Java
-    validations:
-      required: true
-  - type: checkboxes
-    id: options
-    attributes:
-      label: Optional Features
-      options:
-        - label: CodeQL
-        - label: Gitleaks
-        - label: Dependabot
-        - label: Release automation
+    - type: input
+      id: repo-name
+      attributes:
+          label: Repository Name
+          description: The full name of the repository (e.g., my-service).
+      validations:
+          required: true
+    - type: dropdown
+      id: repo-type
+      attributes:
+          label: Repository Type
+          options:
+              - service
+              - library
+              - frontend
+              - CLI
+              - documentation
+      validations:
+          required: true
+    - type: dropdown
+      id: language
+      attributes:
+          label: Programming Language
+          options:
+              - Node.js
+              - Go
+              - Python
+              - Java
+      validations:
+          required: true
+    - type: checkboxes
+      id: options
+      attributes:
+          label: Optional Features
+          options:
+              - label: CodeQL
+              - label: Gitleaks
+              - label: Dependabot
+              - label: Release automation

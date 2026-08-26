@@ -1,0 +1,19 @@
+name: 'Final Gate'
+description: 'Aggregate upstream job results into a single required check that fails on any failure/cancelled job.'
+
+inputs:
+    results:
+        description: 'Space-separated "job=result" pairs (e.g. "lint=success test=failure build=skipped")'
+        required: true
+    coverage:
+        description: 'Reported coverage percentage (optional)'
+        required: false
+        default: ''
+
+outputs:
+    passed:
+        description: 'true when every job passed'
+
+runs:
+    using: node20
+    main: dist/index.cjs

@@ -1,0 +1,7 @@
+packages:
+    - 'packages/*'
+    - 'packages/actions/*'
+
+# Allow esbuild's install script to run so no build-script warnings appear.
+allowBuilds:
+    esbuild: true

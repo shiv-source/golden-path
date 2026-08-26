@@ -3,18 +3,18 @@ description: File a bug report
 title: '[Bug]: '
 labels: [bug, triage]
 body:
-  - type: textarea
-    attributes:
-      label: Description
-      description: What happened? What did you expect?
-    validations:
-      required: true
-  - type: textarea
-    attributes:
-      label: Steps to Reproduce
-    validations:
-      required: true
-  - type: input
-    attributes:
-      label: Environment
-      description: 'Node version, OS, browser (if applicable)'
+    - type: textarea
+      attributes:
+          label: Description
+          description: What happened? What did you expect?
+      validations:
+          required: true
+    - type: textarea
+      attributes:
+          label: Steps to Reproduce
+      validations:
+          required: true
+    - type: input
+      attributes:
+          label: Environment
+          description: 'Node version, OS, browser (if applicable)'

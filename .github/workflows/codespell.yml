@@ -1,53 +1,53 @@
 name: 'Codespell'
 
 on:
-  workflow_call:
-    inputs:
-      version:
-        description: 'Codespell version (pip installable)'
-        type: string
-        default: '2.4.3'
-      path:
-        description: 'Path to check (defaults to entire repo)'
-        type: string
-        default: '.'
-      ignore-words-file:
-        description: 'Path to a custom ignore-words file'
-        type: string
-        default: ''
-      skip:
-        description: 'Comma-separated paths to skip'
-        type: string
-        default: '.git,node_modules,dist,build,vendor,package-lock.json,*.lock,*.sum'
-      args:
-        description: 'Additional codespell arguments'
-        type: string
-        default: ''
+    workflow_call:
+        inputs:
+            version:
+                description: 'Codespell version (pip installable)'
+                type: string
+                default: '2.4.3'
+            path:
+                description: 'Path to check (defaults to entire repo)'
+                type: string
+                default: '.'
+            ignore-words-file:
+                description: 'Path to a custom ignore-words file'
+                type: string
+                default: ''
+            skip:
+                description: 'Comma-separated paths to skip'
+                type: string
+                default: '.git,node_modules,dist,build,vendor,package-lock.json,*.lock,*.sum'
+            args:
+                description: 'Additional codespell arguments'
+                type: string
+                default: ''
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  check:
-    name: Spell Check
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
+    check:
+        name: Spell Check
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: '3.12'
 
-      - name: Install uv and codespell
-        run: |
-          pip install uv
-          uv pip install --system codespell==${{ inputs.version }}
+            - name: Install uv and codespell
+              run: |
+                  pip install uv
+                  uv pip install --system codespell==${{ inputs.version }}
 
-      - name: Run codespell
-        run: |
-          codespell \
-            "${{ inputs.path }}" \
-            ${{ inputs.ignore-words-file && format('--ignore-words {0}', inputs.ignore-words-file) || '' }} \
-            --skip '${{ inputs.skip }}' \
-            ${{ inputs.args }}
+            - name: Run codespell
+              run: |
+                  codespell \
+                    "${{ inputs.path }}" \
+                    ${{ inputs.ignore-words-file && format('--ignore-words {0}', inputs.ignore-words-file) || '' }} \
+                    --skip '${{ inputs.skip }}' \
+                    ${{ inputs.args }}

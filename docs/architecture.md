@@ -3,55 +3,132 @@
 ## System Overview
 
 ```
-┌───────────────────────────────────────────────────────┐
-│  golden-path (this repo)                               │
-│                                                        │
-│  ┌─────────────────┐  ┌─────────────────────────────┐ │
-│  │ Reusable         │  │ Onboarding System            │ │
-│  │ Workflows (15)   │  │                              │ │
-│  │                  │  │ Issue Form → Parse → Validate│ │
-│  │ • build-test-node│  │ → Generate Config → PR       │ │
-│  │ • build-test-go  │  │                              │ │
-│  │ • security-scan  │  │ → Merge PR → Apply Config →  │ │
-│  │ • codespell      │  │   PR in Target Repo          │ │
-│  │ • betterleaks    │  └─────────────────────────────┘ │
-│  │ • ggshield       │                                  │
-│  │ • release-github │  ┌─────────────────────────────┐ │
-│  │ • release-npm    │  │ Profile Templates             │ │
-│  │ • release-github │  │ common/ node-library/         │ │
-│  │   -npm           │  │ node-service/ go-service/     │ │
-│  │ • deploy-service │  └─────────────────────────────┘ │
-│  │ • dep-automerge  │                                  │
-│  │ • actionlint     │  ┌─────────────────────────────┐ │
-│  │ • ci             │  │ Repo Configs                 │ │
-│  └─────────────────┘  │ repositories/*.yaml           │ │
-│                       └─────────────────────────────┘ │
-│  ┌─────────────────┐                                  │
-│  │ Scripts (12.mjs) │  ┌─────────────────────────────┐ │
-│  │ lib/: gh,fs,     │  │ Dev Tooling                  │ │
-│  │   profile-map    │  │ Husky, Commitlint, ESLint,   │ │
-│  │ apply-config     │  │ Prettier, VS Code            │ │
-│  │ merge-profiles   │  └─────────────────────────────┘ │
-│  │ onboarding PRs   │                                  │
-│  │ compliance-check │                                  │
-│  │ git-commit-push  │                                  │
-│  └─────────────────┘                                  │
-└──────────────────────┬────────────────────────────────┘
-                       │
-                       │ uses: golden-path/.github/workflows/*.yml@main
-                       ▼
-┌───────────────────────────────────────────────────────┐
-│  100+ Target Repositories (across the org)             │
-│  Each repo has a thin .github/workflows/ci.yml calling │
-│  golden-path reusable workflows                       │
-└───────────────────────────────────────────────────────┘
-
-┌───────────────────────────────────────────────────────┐
-│  platform-hub (sibling repo)                 │
-│  NestJS + React dashboard, policy engine, GitHub App   │
-│  Reads repos/*.yaml from golden-path via GitHub API    │
-└───────────────────────────────────────────────────────┘
+                    ┌──────────────────────────────────┐
+                    │           golden-path            │
+                    │      (this repo — pnpm monorepo) │
+                    └───────────────┬──────────────────┘
+                                    │
+        ┌───────────────┬───────────┴───────────┬──────────────────┐
+        ▼               ▼                       ▼                  ▼
+┌───────────────┐ ┌───────────────────┐ ┌──────────────────┐ ┌──────────────┐
+│ Reusable       │ │ TypeScript Actions│ │ Onboarding System│ │ Profiles (4) │
+│ Workflows (21) │ │ (6)               │ │ (13 .mjs scripts)│ │              │
+│                │ │                   │ │                  │ │              │
+│ config-driven  │ │ parse-config      │ │ issue → parse →  │ │ common/      │
+│ orchestrator,  │ │ changed-files     │ │ validate → config│ │ node-library/│
+│ language CI,   │ │ coverage-gate     │ │ → PR → apply in  │ │ node-service/│
+│ scans, release,│ │ final-gate        │ │ target repo      │ │ go-service/  │
+│ deploy, renovate│ setup-go (composite)│ + repositories/*.yaml │              │
+└───────┬───────┘ └─────────┬─────────┘ └─────────┬────────┘ └──────────────┘
+        │                   │                     │
+        └───────────────────┴─────────────────────┘
+                             │ consumed via `uses:` …@main
+                             ▼
+                   ┌──────────────────────┐
+                   │  100+ target repos    │
+                   │ thin ci.yml each      │
+                   └──────────────────────┘
 ```
+
+`golden-path` is the org's internal developer platform **toolkit**. It is consumed by
+100+ repositories: each repo adds a thin `.github/workflows/ci.yml` that calls the
+reusable workflows and actions here via `uses: shiv-source/golden-path/…@main`.
+The platform dashboard, policy engine, and GitHub App live in the sibling repo
+`platform-hub`, which reads `repositories/*.yaml` through the GitHub API.
+
+## Repository Layout
+
+```
+golden-path/
+├── packages/                      # pnpm workspace
+│   ├── core/                      # @golden-path/core — shared types + helpers (config, exec)
+│   │   └── src/{types,config,exec}.ts + __tests__/
+│   └── actions/                   # one package per TypeScript action
+│       ├── parse-config/          #   .github/actions/parse-config
+│       ├── changed-files/         #   .github/actions/changed-files
+│       ├── coverage-gate/         #   .github/actions/coverage-gate
+│       └── final-gate/            #   .github/actions/final-gate
+├── .github/
+│   ├── actions/                   # action.yml manifests + committed dist/index.cjs bundles
+│   ├── workflows/                 # 21 reusable + triggered workflows
+│   ├── ISSUE_TEMPLATE/            # repository-onboarding form
+│   └── PULL_REQUEST_TEMPLATE.md
+├── scripts/                       # onboarding + automation scripts (13 .mjs, zero deps)
+│   ├── lib/                       # shared helpers (gh, fs, profile-map)
+│   └── test/                      # node --test suites
+├── profiles/                      # file templates (common, node-library, node-service, go-service)
+├── repositories/                  # per-repo config, generated by onboarding
+├── docs/                          # this guide + developer + admin guides
+└── …                              # editor config, husky hooks, tsconfig.base, vitest.config
+```
+
+## Reusable Workflows
+
+Pure YAML orchestration. Every workflow is `on: workflow_call` (or issue/push
+triggered) and delegates business logic to the TypeScript actions and `.mjs` scripts.
+
+| Workflow                      | Purpose                                                                                   |
+| ----------------------------- | ----------------------------------------------------------------------------------------- |
+| `golden-path-ci.yml`          | Config-driven CI orchestrator (entry point)                                               |
+| `build-test-node.yml`         | Node.js CI: lint → typecheck → test → build                                               |
+| `build-test-go.yml`           | Go CI: lint → vet → test → build (coverage + change detection)                            |
+| `security-scan.yml`           | CodeQL static analysis                                                                    |
+| `secret-scan-betterleaks.yml` | Secret scanning (Betterleaks)                                                             |
+| `secret-scan-ggshield.yml`    | Secret scanning (GitGuardian)                                                             |
+| `release-github.yml`          | GitHub Release (tag-driven)                                                               |
+| `release-npm.yml`             | npm publish                                                                               |
+| `release-github-npm.yml`      | GitHub Release → npm publish                                                              |
+| `deploy-service.yml`          | Docker build → push → deploy                                                              |
+| `dependency-update.yml`       | Dependabot auto-merge                                                                     |
+| `repository-onboarding.yml`   | Issue → validate → generate config → PR                                                   |
+| `apply-repository-config.yml` | Profile merge → PR into target repo                                                       |
+| `self-ci.yml`                 | Golden-path's own CI (lint, typecheck, test, format, dist check, actionlint, secret-scan) |
+
+The remaining workflows cover operational tooling: `actionlint`, `renovate`,
+`stale-issue`, `self-release`, `release-dry-run`, and `deploy-s3`.
+
+## TypeScript Action Layer
+
+The six actions under `.github/actions/` are the reusable building blocks referenced
+by the workflows. Four are real **JavaScript actions** written in TypeScript; two are
+composite actions that orchestrate upstream tooling.
+
+| Action           | Type      | Purpose                                             |
+| ---------------- | --------- | --------------------------------------------------- |
+| `parse-config`   | JS (TS)   | Read `.github/golden-path.yml` → normalized outputs |
+| `changed-files`  | JS (TS)   | PR-aware change detection against globs             |
+| `coverage-gate`  | JS (TS)   | Run Go tests, enforce a coverage floor              |
+| `final-gate`     | JS (TS)   | Aggregate job results into one required check       |
+| `setup-go`       | composite | Install Go from a version or go.mod/go.work         |
+| `setup-go-cache` | composite | Install Go + cache module/build caches              |
+
+Each TypeScript action follows the same pattern for testability:
+
+```
+packages/actions/<name>/src/
+├── action.ts          # pure, dependency-free logic (fully unit-tested)
+├── index.ts           # thin main(): @actions/core inputs/outputs + error handling
+└── __tests__/         # Vitest coverage of action.ts
+```
+
+Shared logic — the typed `GoldenPathConfig` schema, parse/normalize helpers, and an
+injectable `exec` runner — lives in `packages/core` (`@golden-path/core`), imported by
+the actions via the workspace.
+
+### Bundling
+
+Actions ship a committed `dist/index.cjs` bundle (esbuild, CommonJS, `target: node20`):
+
+- Consumers fetch the action with `uses:` but never run `npm install`, so the bundle
+  must be **self-contained** — it inlines `@actions/core`, `@actions/github`, third-party
+  deps, and `@golden-path/core`.
+- CommonJS (not ESM) is deliberate: `@actions/core` dynamically `require()`s Node
+  builtins (e.g. `tunnel` → `net`), which ESM bundles cannot handle. `index.cjs` is
+  unambiguous under the repo's `"type": "module"` root.
+- Rebuild after changing any action source: `pnpm run build:actions`. CI
+  (`self-ci.yml` → `dist` job) fails when the committed bundle is stale.
+- Tests resolve `@golden-path/core` straight from `packages/core/src` (Vitest alias), so
+  unit tests run without a build step.
 
 ## Onboarding Flow
 
@@ -80,8 +157,16 @@ Conflicts flagged as "CONFLICT — manual review needed."
 
 ## Design Principles
 
-- **No build step** — scripts are plain `.mjs`, run directly by Node.js
-- **Zero runtime deps** — scripts use only Node.js stdlib + `gh` CLI
+- **TypeScript actions** — action logic lives in `packages/actions/<name>/src` as pure,
+  unit-tested TypeScript; a thin `@actions/core` wrapper handles inputs/outputs. Shared
+  types/helpers live in `packages/core`
+- **Committed bundles** — actions are bundled to `.github/actions/<name>/dist/index.cjs`
+  (esbuild, CJS) so cross-repo consumers never run `npm install`; CI fails when a bundle
+  is stale
+- **No build step for scripts** — onboarding scripts remain plain `.mjs`, run directly by
+  Node.js
+- **Zero runtime deps for scripts** — scripts use only Node.js stdlib + `gh` CLI
 - **Idempotent** — re-running onboarding or config application is safe
 - **Never overwrite silently** — conflicts flagged for manual review
-- **Profile composition** — profiles inherit via `inherits` chain in config; common + language-specific files merged deterministically
+- **Profile composition** — profiles inherit via `inherits` chain in config; common +
+  language-specific files merged deterministically

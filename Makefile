@@ -1,7 +1,7 @@
 # Golden Path — Development Makefile
 # Usage: make <target>
 
-.PHONY: help install test lint format format-check lint-workflows release-major release-minor release-patch
+.PHONY: help install test lint typecheck format format-check lint-workflows build-actions release-major release-minor release-patch
 
 # Show available targets
 help:
@@ -9,27 +9,35 @@ help:
 
 # Install dependencies and set up git hooks
 install: ## Install deps + configure Husky
-	npm ci
+	pnpm install
 
-# Run 42 test suites via node --test
+# Run the test suite (action TS tests via Vitest + scripts via node --test)
 test: ## Run test suite
-	npm test
+	pnpm test
 
-# Lint scripts with ESLint
-lint: ## Lint scripts
-	npm run lint
+# Lint scripts and TS packages with ESLint
+lint: ## Lint scripts + packages
+	pnpm run lint
+
+# Typecheck the TS packages
+typecheck: ## Typecheck TS packages
+	pnpm typecheck
 
 # Format all files with Prettier
 format: ## Format all files
-	npm run format
+	pnpm run format
 
 # Check formatting without modifying files
 format-check: ## Check formatting
-	npm run format:check
+	pnpm run format:check
 
 # Lint GitHub Actions workflows with actionlint
 lint-workflows: ## Lint workflows
 	actionlint .github/workflows/*.yml
+
+# Re-bundle TypeScript actions into committed dist/index.cjs bundles
+build-actions: ## Re-bundle package-backed actions (parse-config, changed-files, coverage-gate, final-gate)
+	pnpm run build:actions
 
 # Bump patch version and create GitHub Release
 release-patch: ## Release patch (v1.0.0 → v1.0.1)

@@ -1,0 +1,20 @@
+{
+    "name": "@golden-path/action-changed-files",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "description": "TypeScript action: PR-aware change detection against glob patterns.",
+    "scripts": {
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@actions/core": "3.0.1",
+        "@actions/github": "9.1.1",
+        "@golden-path/core": "workspace:*",
+        "picomatch": "4.0.2"
+    },
+    "devDependencies": {
+        "@types/picomatch": "4.0.3"
+    }
+}

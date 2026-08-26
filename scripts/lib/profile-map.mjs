@@ -2,16 +2,16 @@
 // Keep in sync with platform-observability's packages/shared/src/profile-map.ts.
 
 const PROFILE_MAP = {
-  node: {
-    library: ['common', 'node-library'],
-    service: ['common', 'node-library', 'node-service'],
-    frontend: ['common', 'node-library'],
-    cli: ['common', 'node-library'],
-    docs: ['common'],
-  },
-  go: {
-    service: ['common', 'go-service'],
-  },
+    node: {
+        library: ['common', 'node-library'],
+        service: ['common', 'node-library', 'node-service'],
+        frontend: ['common', 'node-library'],
+        cli: ['common', 'node-library'],
+        docs: ['common'],
+    },
+    go: {
+        service: ['common', 'go-service'],
+    },
 };
 
 /**
@@ -20,18 +20,18 @@ const PROFILE_MAP = {
  * @returns {string[]}
  */
 export function resolveProfilesFor(language, type) {
-  const profiles = PROFILE_MAP[language]?.[type];
-  if (!profiles) {
-    throw new Error(`No profile mapping for language="${language}" type="${type}"`);
-  }
-  return profiles;
+    const profiles = PROFILE_MAP[language]?.[type];
+    if (!profiles) {
+        throw new Error(`No profile mapping for language="${language}" type="${type}"`);
+    }
+    return profiles;
 }
 
 /**
  * @returns {string[]}
  */
 export function getSupportedLanguages() {
-  return Object.keys(PROFILE_MAP);
+    return Object.keys(PROFILE_MAP);
 }
 
 /**
@@ -39,5 +39,5 @@ export function getSupportedLanguages() {
  * @returns {string[]}
  */
 export function getSupportedTypes(language) {
-  return Object.keys(PROFILE_MAP[language] ?? {});
+    return Object.keys(PROFILE_MAP[language] ?? {});
 }

@@ -1,32 +1,32 @@
 name: Release
 on:
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
-  workflow_dispatch:
+    push:
+        tags:
+            - 'v[0-9]+.[0-9]+.[0-9]+*'
+    workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+    contents: write
+    pull-requests: write
 
 jobs:
-  gate:
-    if: github.repository == 'shiv-source/golden-path'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - run: echo "Running on golden-path repo"
+    gate:
+        if: github.repository == 'shiv-source/golden-path'
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - run: echo "Running on golden-path repo"
 
-  ci:
-    name: CI
-    if: github.ref_type == 'tag'
-    needs: [gate]
-    uses: ./.github/workflows/self-ci.yml
+    ci:
+        name: CI
+        if: github.ref_type == 'tag'
+        needs: [gate]
+        uses: ./.github/workflows/self-ci.yml
 
-  release:
-    name: Release
-    needs: [ci]
-    if: github.ref_type == 'tag'
-    uses: ./.github/workflows/release-github.yml
-    with:
-      tag: '${{ github.ref_name }}'
+    release:
+        name: Release
+        needs: [ci]
+        if: github.ref_type == 'tag'
+        uses: ./.github/workflows/release-github.yml
+        with:
+            tag: '${{ github.ref_name }}'

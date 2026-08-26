@@ -11,9 +11,9 @@ import { execSync } from 'node:child_process';
  * @returns {string}
  */
 export function ghSh(cmd, options) {
-  try {
-    return execSync(`gh ${cmd}`, { encoding: 'utf-8', stdio: 'pipe', ...options }).trim();
-  } catch {
-    return '';
-  }
+    try {
+        return execSync(`gh ${cmd}`, { encoding: 'utf-8', stdio: 'pipe', ...options }).trim();
+    } catch {
+        return '';
+    }
 }

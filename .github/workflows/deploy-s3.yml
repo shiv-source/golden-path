@@ -1,79 +1,79 @@
 name: 'Deploy to S3'
 
 on:
-  workflow_call:
-    inputs:
-      aws-region:
-        description: 'AWS region'
-        type: string
-        default: 'us-east-1'
-      s3-bucket:
-        description: 'S3 bucket name'
-        type: string
-        required: true
-      s3-prefix:
-        description: 'Prefix/path within the bucket (empty = root)'
-        type: string
-        default: ''
-      source-dir:
-        description: 'Local directory to upload'
-        type: string
-        default: 'dist'
-      cache-control:
-        description: 'Cache-Control header for uploaded files'
-        type: string
-        default: 'public, max-age=31536000, immutable'
-      cloudfront-distribution:
-        description: 'CloudFront distribution ID (skip invalidation if empty)'
-        type: string
-        default: ''
-      invalidation-path:
-        description: 'CloudFront invalidation path'
-        type: string
-        default: '/*'
-      delete-removed:
-        description: 'Delete files from S3 that do not exist locally'
-        type: string
-        default: 'true'
-      aws-role-arn:
-        description: 'IAM role ARN for OIDC authentication (preferred). Falls back to access keys if empty.'
-        type: string
-        default: ''
-    secrets:
-      AWS_ACCESS_KEY_ID:
-        description: 'AWS access key ID (only if not using OIDC)'
-        required: false
-      AWS_SECRET_ACCESS_KEY:
-        description: 'AWS secret access key (only if not using OIDC)'
-        required: false
+    workflow_call:
+        inputs:
+            aws-region:
+                description: 'AWS region'
+                type: string
+                default: 'us-east-1'
+            s3-bucket:
+                description: 'S3 bucket name'
+                type: string
+                required: true
+            s3-prefix:
+                description: 'Prefix/path within the bucket (empty = root)'
+                type: string
+                default: ''
+            source-dir:
+                description: 'Local directory to upload'
+                type: string
+                default: 'dist'
+            cache-control:
+                description: 'Cache-Control header for uploaded files'
+                type: string
+                default: 'public, max-age=31536000, immutable'
+            cloudfront-distribution:
+                description: 'CloudFront distribution ID (skip invalidation if empty)'
+                type: string
+                default: ''
+            invalidation-path:
+                description: 'CloudFront invalidation path'
+                type: string
+                default: '/*'
+            delete-removed:
+                description: 'Delete files from S3 that do not exist locally'
+                type: string
+                default: 'true'
+            aws-role-arn:
+                description: 'IAM role ARN for OIDC authentication (preferred). Falls back to access keys if empty.'
+                type: string
+                default: ''
+        secrets:
+            AWS_ACCESS_KEY_ID:
+                description: 'AWS access key ID (only if not using OIDC)'
+                required: false
+            AWS_SECRET_ACCESS_KEY:
+                description: 'AWS secret access key (only if not using OIDC)'
+                required: false
 
 permissions:
-  contents: read
-  id-token: write
+    contents: read
+    id-token: write
 
 jobs:
-  deploy:
-    name: Deploy
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
+    deploy:
+        name: Deploy
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: '${{ inputs.aws-role-arn }}'
-          aws-region: '${{ inputs.aws-region }}'
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                  role-to-assume: '${{ inputs.aws-role-arn }}'
+                  aws-region: '${{ inputs.aws-region }}'
 
-      - name: Sync to S3
-        run: |
-          aws s3 sync "${{ inputs.source-dir }}" "s3://${{ inputs.s3-bucket }}/${{ inputs.s3-prefix }}" \
-            --cache-control "${{ inputs.cache-control }}" \
-            ${{ inputs.delete-removed == 'true' && '--delete' || '' }}
+            - name: Sync to S3
+              run: |
+                  aws s3 sync "${{ inputs.source-dir }}" "s3://${{ inputs.s3-bucket }}/${{ inputs.s3-prefix }}" \
+                    --cache-control "${{ inputs.cache-control }}" \
+                    ${{ inputs.delete-removed == 'true' && '--delete' || '' }}
 
-      - name: Invalidate CloudFront
-        if: inputs.cloudfront-distribution != ''
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id "${{ inputs.cloudfront-distribution }}" \
-            --paths "${{ inputs.invalidation-path }}"
+            - name: Invalidate CloudFront
+              if: inputs.cloudfront-distribution != ''
+              run: |
+                  aws cloudfront create-invalidation \
+                    --distribution-id "${{ inputs.cloudfront-distribution }}" \
+                    --paths "${{ inputs.invalidation-path }}"
