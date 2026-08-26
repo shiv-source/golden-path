@@ -12,7 +12,7 @@
         ▼               ▼                       ▼                  ▼
 ┌───────────────┐ ┌───────────────────┐ ┌──────────────────┐ ┌──────────────┐
 │ Reusable       │ │ TypeScript Actions│ │ Onboarding System│ │ Profiles (4) │
-│ Workflows (23) │ │ (6)               │ │ (13 .mjs scripts)│ │              │
+│ Workflows (24) │ │ (6)               │ │ (13 .mjs scripts)│ │              │
 │                │ │                   │ │                  │ │              │
 │ config-driven  │ │ parse-config      │ │ issue → parse →  │ │ common/      │
 │ orchestrator,  │ │ changed-files     │ │ validate → config│ │ node-library/│
@@ -52,7 +52,7 @@ golden-path/
 │       └── final-gate/            #   .github/actions/final-gate
 ├── .github/
 │   ├── actions/                   # action.yaml manifests + committed dist/index.cjs bundles
-│   ├── workflows/                 # 23 reusable + triggered workflows
+│   ├── workflows/                 # 24 reusable + triggered workflows
 │   ├── ISSUE_TEMPLATE/            # repository-onboarding form
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── scripts/                       # onboarding + automation scripts (13 .mjs, zero deps)
@@ -87,6 +87,7 @@ triggered) and delegates business logic to the TypeScript actions and `.mjs` scr
 | `issue-labels.yaml`            | Apply three-tier issue labels from issue-form answers                                     |
 | `pr-assignee.yaml`             | Auto-assign PR to its author and commit authors                                           |
 | `self-ci.yaml`                 | Golden-path's own CI (lint, typecheck, test, format, dist check, actionlint, secret-scan) |
+| `self-pr-assignee.yaml`        | Golden-path's own PR auto-assignment                                                      |
 
 The remaining workflows cover operational tooling: `actionlint`, `renovate`,
 `stale-issue`, `self-release`, `release-dry-run`, and `deploy-s3`.
