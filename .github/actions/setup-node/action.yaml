@@ -66,7 +66,7 @@ outputs:
         value: ${{ steps.detect.outputs.lockfile }}
     cache-path:
         description: 'Resolved package manager store/cache path'
-        value: ${{ steps.cache-path.outputs.cache-path }}
+        value: ${{ steps.cache-path.outputs.path }}
     cache-hit:
         description: 'true when the dependency cache was restored from an exact key match'
         value: ${{ steps.cache.outputs.cache-hit }}
@@ -234,7 +234,7 @@ runs:
           # actions/cache@v6.1.0
           uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
           with:
-              path: ${{ steps.cache-path.outputs.cache-path }}
+              path: ${{ steps.cache-path.outputs.path }}
               key: ${{ runner.os }}-${{ steps.detect.outputs.package-manager }}-${{ steps.pm-version.outputs.package-manager-version }}-node${{ steps.install-node.outputs.node-version }}-${{ hashFiles(format('{0}/{1}', inputs.working-directory, steps.detect.outputs.lockfile)) }}
               restore-keys: |
                   ${{ runner.os }}-${{ steps.detect.outputs.package-manager }}-${{ steps.pm-version.outputs.package-manager-version }}-node${{ steps.install-node.outputs.node-version }}-
