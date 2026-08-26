@@ -1,0 +1,191 @@
+name: 'Release (GitHub)'
+
+on:
+    workflow_call:
+        inputs:
+            tag-prefix:
+                description: 'Tag prefix (e.g., "v")'
+                type: string
+                default: 'v'
+            draft:
+                description: 'Create as draft release'
+                type: boolean
+                default: false
+            prerelease:
+                description: 'Mark as prerelease'
+                type: boolean
+                default: false
+            tag:
+                description: 'Explicit tag to release (skips release-please). Use for tag-driven releases.'
+                type: string
+                default: ''
+            generate-release-notes:
+                description: 'Auto-generate release notes from commits'
+                type: boolean
+                default: true
+            prerelease-branch:
+                description: 'Branch name for RC releases (e.g. "next"). Produces v1.0.0-rc.1 style tags'
+                type: string
+                default: ''
+            target-branch:
+                description: 'Branch to release from'
+                type: string
+                default: 'main'
+            body:
+                description: 'Additional release notes text'
+                type: string
+                default: ''
+            body-file:
+                description: 'Path to a file containing additional release notes'
+                type: string
+                default: ''
+            extra-files:
+                description: 'Newline-separated list of files to attach to release'
+                type: string
+                default: ''
+        outputs:
+            tag_name:
+                description: 'Created tag name'
+                value: '${{ jobs.release.outputs.tag_name }}'
+            version:
+                description: 'Semantic version (e.g., 1.2.3)'
+                value: '${{ jobs.release.outputs.version }}'
+            is_released:
+                description: 'Whether a release was created'
+                value: '${{ jobs.release.outputs.is_released }}'
+            is_prerelease:
+                description: 'Whether this is a prerelease'
+                value: '${{ jobs.release.outputs.is_prerelease }}'
+            release_type:
+                description: 'Release type: major, minor, patch, initial, rc, or tag'
+                value: '${{ jobs.release.outputs.release_type }}'
+            major:
+                description: 'Major version number'
+                value: '${{ jobs.release.outputs.major }}'
+            minor:
+                description: 'Minor version number'
+                value: '${{ jobs.release.outputs.minor }}'
+            patch:
+                description: 'Patch version number'
+                value: '${{ jobs.release.outputs.patch }}'
+
+permissions:
+    contents: write
+    pull-requests: write
+
+jobs:
+    release:
+        name: Release
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        outputs:
+            tag_name: '${{ steps.release-please.outputs.tag_name || steps.tag-info.outputs.tag_name }}'
+            version: "${{ (steps.release-please.outputs.major || steps.tag-info.outputs.major) && format('{0}.{1}.{2}', steps.release-please.outputs.major || steps.tag-info.outputs.major, steps.release-please.outputs.minor || steps.tag-info.outputs.minor, steps.release-please.outputs.patch || steps.tag-info.outputs.patch) || '' }}"
+            is_released: '${{ steps.release-please.outputs.release_created || steps.tag-info.outputs.release_created }}'
+            release_type: '${{ steps.release-type.outputs.type || steps.tag-info.outputs.type }}'
+            is_prerelease: "${{ inputs.prerelease || (inputs.prerelease-branch != '' && inputs.target-branch == inputs.prerelease-branch) || steps.tag-info.outputs.type == 'rc' }}"
+            major: '${{ steps.release-please.outputs.major || steps.tag-info.outputs.major }}'
+            minor: '${{ steps.release-please.outputs.minor || steps.tag-info.outputs.minor }}'
+            patch: '${{ steps.release-please.outputs.patch || steps.tag-info.outputs.patch }}'
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+              with:
+                  fetch-depth: 0
+
+            - name: Determine next version
+              id: release-please
+              if: inputs.tag == ''
+              # googleapis/release-please-action@v5.0.0
+              uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7
+              with:
+                  target-branch: '${{ inputs.target-branch }}'
+                  release-type: simple
+                  prerelease: ${{ inputs.prerelease-branch != '' && inputs.target-branch == inputs.prerelease-branch }}
+
+            - name: Set tag outputs
+              id: tag-info
+              if: inputs.tag != ''
+              run: |
+                  TAG="${{ inputs.tag }}"
+                  VERSION=$(echo "$TAG" | sed 's/^v//' | sed 's/-.*//')
+                  IFS='.' read -r major minor patch <<< "$VERSION"
+                  TYPE=tag
+                  case "${TAG,,}" in *-rc.*|*-rc|*-alpha.*|*-alpha|*-beta.*|*-beta) TYPE=rc ;; esac
+                  {
+                    echo "tag_name=$TAG"
+                    echo "release_created=true"
+                    echo "major=$major"
+                    echo "minor=$minor"
+                    echo "patch=$patch"
+                    echo "type=$TYPE"
+                  } >> "$GITHUB_OUTPUT"
+
+            - name: Determine release type
+              id: release-type
+              if: steps.release-please.outputs.release_created && inputs.tag == ''
+              run: |
+                  prefix="${{ inputs.tag-prefix }}"
+                  prev=$(git tag --list "${prefix}*" --sort=-version:refname | sed -n 2p | sed "s/^${prefix}//")
+                  if [ -z "$prev" ]; then
+                    echo "type=initial" >> "$GITHUB_OUTPUT"
+                    exit 0
+                  fi
+                  IFS='.' read -r p_major p_minor _ <<< "$prev"
+                  c_major=${{ steps.release-please.outputs.major }}
+                  c_minor=${{ steps.release-please.outputs.minor }}
+                  if [[ $c_major -gt $p_major ]]; then
+                    echo "type=major" >> "$GITHUB_OUTPUT"
+                  elif [[ $c_minor -gt $p_minor ]]; then
+                    echo "type=minor" >> "$GITHUB_OUTPUT"
+                  else
+                    echo "type=patch" >> "$GITHUB_OUTPUT"
+                  fi
+
+            - name: Build release notes file
+              id: notes
+              if: steps.release-please.outputs.release_created || steps.tag-info.outputs.release_created
+              env:
+                  BODY: '${{ inputs.body }}'
+                  BODY_FILE: '${{ inputs.body-file }}'
+              run: |
+                  NOTES_FILE=$(mktemp)
+                  echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
+                  if [ -n "$BODY" ]; then
+                    echo "$BODY" >> "$NOTES_FILE"
+                  fi
+                  if [ -n "$BODY_FILE" ] && [ -f "$BODY_FILE" ]; then
+                    cat "$BODY_FILE" >> "$NOTES_FILE"
+                  fi
+
+            - name: Create GitHub Release
+              if: steps.release-please.outputs.release_created || steps.tag-info.outputs.release_created
+              env:
+                  GH_TOKEN: '${{ github.token }}'
+                  TAG: '${{ inputs.tag || steps.release-please.outputs.tag_name }}'
+                  IS_RC: "${{ inputs.prerelease-branch != '' && inputs.target-branch == inputs.prerelease-branch }}"
+                  IS_TAG: "${{ inputs.tag != '' }}"
+              run: |
+                  NOTES_FILE="${{ steps.notes.outputs.notes_file }}"
+
+                  set -- "$TAG" --title "$TAG"
+
+                  ${{ inputs.draft }} && set -- "$@" --draft
+                  if [ "$IS_RC" = "true" ] || ${{ inputs.prerelease }}; then
+                    set -- "$@" --prerelease
+                  fi
+                  if [ "$IS_TAG" = "true" ]; then
+                    case "${TAG,,}" in *-rc.*|*-rc|*-alpha.*|*-alpha|*-beta.*|*-beta) set -- "$@" --prerelease ;; esac
+                  fi
+                  ${{ inputs.generate-release-notes }} && set -- "$@" --generate-notes
+                  if [ -s "$NOTES_FILE" ]; then
+                    set -- "$@" --notes-file "$NOTES_FILE"
+                  fi
+
+                  gh release create "$@"
+
+                  if [ -n "${{ inputs.extra-files }}" ]; then
+                    echo "${{ inputs.extra-files }}" | while IFS= read -r file; do
+                      [ -f "$file" ] && gh release upload "$TAG" "$file"
+                    done
+                  fi

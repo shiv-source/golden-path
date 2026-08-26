@@ -1,0 +1,282 @@
+name: 'Setup Node.js'
+description: 'Install Node.js and a package manager (npm, pnpm, or yarn) with auto-detection, version pinning, registry auth, dependency caching, and an optional dependency install.'
+
+inputs:
+    node-version:
+        description: 'Node.js version to install (ignored when node-version-file is set)'
+        required: false
+        default: '22'
+    node-version-file:
+        description: 'Path to a .nvmrc, .node-version, or package.json that pins the Node.js version (relative to the repository root)'
+        required: false
+        default: ''
+    package-manager:
+        description: 'Package manager to use: auto (detect), npm, pnpm, or yarn'
+        required: false
+        default: 'auto'
+    package-manager-version:
+        description: 'Exact package manager version to install (e.g. 9.12.1). Defaults to the packageManager field in package.json, then latest.'
+        required: false
+        default: ''
+    working-directory:
+        description: 'Directory containing package.json and the lockfile (used for detection, cache keys, and install)'
+        required: false
+        default: '.'
+    cache:
+        description: 'Restore and save the package manager store/cache (true/false)'
+        required: false
+        default: 'true'
+    run-install:
+        description: 'Run the dependency install after setup (true/false)'
+        required: false
+        default: 'true'
+    install-command:
+        description: 'Override the install command. "auto" picks the frozen-lockfile command for the detected manager.'
+        required: false
+        default: 'auto'
+    registry-url:
+        description: 'npm registry URL; writes .npmrc (used with scope and always-auth)'
+        required: false
+        default: ''
+    scope:
+        description: 'npm scope to associate with the registry (e.g. @my-org)'
+        required: false
+        default: ''
+    always-auth:
+        description: 'Always authenticate against the registry (true/false)'
+        required: false
+        default: 'false'
+    auth-token:
+        description: 'npm registry token, exposed as NODE_AUTH_TOKEN during install. Pass secrets here, not literals.'
+        required: false
+        default: ''
+
+outputs:
+    package-manager:
+        description: 'Detected or requested package manager (npm, pnpm, or yarn)'
+        value: ${{ steps.detect.outputs.package-manager }}
+    package-manager-version:
+        description: 'Installed package manager version'
+        value: ${{ steps.pm-version.outputs.package-manager-version }}
+    node-version:
+        description: 'Installed Node.js version'
+        value: ${{ steps.install-node.outputs.node-version }}
+    lockfile:
+        description: 'Detected lockfile relative to the working directory (empty when none exists)'
+        value: ${{ steps.detect.outputs.lockfile }}
+    cache-path:
+        description: 'Resolved package manager store/cache path'
+        value: ${{ steps.cache-path.outputs.cache-path }}
+    cache-hit:
+        description: 'true when the dependency cache was restored from an exact key match'
+        value: ${{ steps.cache.outputs.cache-hit }}
+    install-command:
+        description: 'Install command that was run (empty when run-install is false)'
+        value: ${{ steps.install.outputs.install-command }}
+
+runs:
+    using: composite
+    steps:
+        # node-version and node-version-file are mutually exclusive for
+        # actions/setup-node, so emit exactly one of them.
+        - id: node-version
+          name: Resolve Node.js version
+          shell: bash
+          run: |
+              if [ -n "${{ inputs.node-version-file }}" ]; then
+                echo "node-version=" >> "$GITHUB_OUTPUT"
+                echo "node-version-file=${{ inputs.node-version-file }}" >> "$GITHUB_OUTPUT"
+              else
+                echo "node-version=${{ inputs.node-version }}" >> "$GITHUB_OUTPUT"
+                echo "node-version-file=" >> "$GITHUB_OUTPUT"
+              fi
+
+        - id: install-node
+          name: Install Node.js
+          # actions/setup-node@v7.0.0
+          # actions/setup-node@v7.0.0
+          uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+          with:
+              node-version: ${{ steps.node-version.outputs.node-version }}
+              node-version-file: ${{ steps.node-version.outputs.node-version-file }}
+              registry-url: ${{ inputs.registry-url }}
+              scope: ${{ inputs.scope }}
+              always-auth: ${{ inputs.always-auth }}
+          env:
+              NODE_AUTH_TOKEN: ${{ inputs.auth-token }}
+
+        # Runs after Node is installed so package.json can be read safely.
+        - id: detect
+          name: Detect package manager
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: |
+              set -euo pipefail
+
+              requested="${{ inputs.package-manager }}"
+              version="${{ inputs.package-manager-version }}"
+              manager="$requested"
+              lockfile=""
+
+              if [ "$requested" = "auto" ]; then
+                manager=""
+                # 1. The packageManager field (e.g. "pnpm@9.12.1") wins over lockfiles.
+                if [ -f package.json ]; then
+                  field="$(node -e "try { process.stdout.write(require('./package.json').packageManager || '') } catch (_) {}" 2>/dev/null || true)"
+                  if [ -n "$field" ]; then
+                    manager="${field%%@*}"
+                    if [ -z "$version" ]; then
+                      version="${field#*@}"
+                    fi
+                  fi
+                fi
+                # 2. Lockfile detection.
+                if [ -z "$manager" ]; then
+                  for lf in pnpm-lock.yaml yarn.lock package-lock.json npm-shrinkwrap.json; do
+                    if [ -f "$lf" ]; then
+                      case "$lf" in
+                        pnpm-lock.yaml) manager=pnpm ;;
+                        yarn.lock) manager=yarn ;;
+                        *) manager=npm ;;
+                      esac
+                      break
+                    fi
+                  done
+                fi
+                # 3. Fallback.
+                [ -n "$manager" ] || manager=npm
+              fi
+
+              case "$manager" in
+                npm)
+                  if [ -f package-lock.json ]; then lockfile=package-lock.json
+                  elif [ -f npm-shrinkwrap.json ]; then lockfile=npm-shrinkwrap.json
+                  fi
+                  ;;
+                pnpm)
+                  if [ -f pnpm-lock.yaml ]; then lockfile=pnpm-lock.yaml; fi
+                  ;;
+                yarn)
+                  if [ -f yarn.lock ]; then lockfile=yarn.lock; fi
+                  ;;
+              esac
+
+              echo "package-manager=$manager" >> "$GITHUB_OUTPUT"
+              echo "package-manager-version=$version" >> "$GITHUB_OUTPUT"
+              echo "lockfile=$lockfile" >> "$GITHUB_OUTPUT"
+
+        # Pin the package manager: corepack honors the packageManager field,
+        # so an explicit npm -g install is only used as a fallback.
+        - id: pm-version
+          name: Install package manager version
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: |
+              set -euo pipefail
+              pm="${{ steps.detect.outputs.package-manager }}"
+              ver="${{ steps.detect.outputs.package-manager-version }}"
+
+              if [ "$pm" = "npm" ]; then
+                if [ -n "$ver" ] && [ "$ver" != "latest" ]; then
+                  npm install -g "npm@$ver"
+                fi
+              else
+                if command -v corepack >/dev/null 2>&1; then
+                  corepack enable >/dev/null 2>&1 || true
+                fi
+                if [ -n "$ver" ]; then
+                  # Version pinned via packageManager or input; strip any sha512
+                  # suffix for the npm fallback.
+                  if ! command -v corepack >/dev/null 2>&1 || ! corepack prepare "$pm@$ver" --activate >/dev/null 2>&1; then
+                    npm install -g "$pm@${ver%%+*}"
+                  fi
+                elif ! "$pm" --version >/dev/null 2>&1; then
+                  # No pinned version: use latest, preferring corepack.
+                  if command -v corepack >/dev/null 2>&1; then
+                    COREPACK_DEFAULT_TO_LATEST=1 "$pm" --version >/dev/null 2>&1 || true
+                  fi
+                  "$pm" --version >/dev/null 2>&1 || npm install -g "$pm"
+                fi
+              fi
+
+              echo "package-manager-version=$("$pm" --version)" >> "$GITHUB_OUTPUT"
+
+        - id: cache-path
+          name: Resolve cache path
+          if: inputs.cache == 'true'
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: |
+              set -euo pipefail
+              pm="${{ steps.detect.outputs.package-manager }}"
+              case "$pm" in
+                npm)
+                  p="$(npm config get cache)"
+                  ;;
+                pnpm)
+                  p="$(pnpm store path)"
+                  ;;
+                yarn)
+                  yver="$("$pm" --version 2>/dev/null || echo 1)"
+                  if [ "$yver" = "1" ] || [[ "$yver" == 1.* ]]; then
+                    p="$("$pm" cache dir 2>/dev/null)"
+                  else
+                    p="$("$pm" config get cacheFolder 2>/dev/null)"
+                  fi
+                  ;;
+              esac
+              # Expand a leading tilde (yarn returns ~-prefixed paths).
+              echo "path=${p/#\~/$HOME}" >> "$GITHUB_OUTPUT"
+
+        - id: cache
+          name: Restore and save dependency cache
+          if: inputs.cache == 'true' && steps.detect.outputs.lockfile != ''
+          # actions/cache@v6.1.0
+          uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+          with:
+              path: ${{ steps.cache-path.outputs.cache-path }}
+              key: ${{ runner.os }}-${{ steps.detect.outputs.package-manager }}-${{ steps.pm-version.outputs.package-manager-version }}-node${{ steps.install-node.outputs.node-version }}-${{ hashFiles(format('{0}/{1}', inputs.working-directory, steps.detect.outputs.lockfile)) }}
+              restore-keys: |
+                  ${{ runner.os }}-${{ steps.detect.outputs.package-manager }}-${{ steps.pm-version.outputs.package-manager-version }}-node${{ steps.install-node.outputs.node-version }}-
+                  ${{ runner.os }}-${{ steps.detect.outputs.package-manager }}-node${{ steps.install-node.outputs.node-version }}-
+                  ${{ runner.os }}-${{ steps.detect.outputs.package-manager }}-
+
+        - id: install
+          name: Install dependencies
+          if: inputs.run-install == 'true'
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          env:
+              NODE_AUTH_TOKEN: ${{ inputs.auth-token }}
+          run: |
+              set -euo pipefail
+              pm="${{ steps.detect.outputs.package-manager }}"
+              ver="${{ steps.pm-version.outputs.package-manager-version }}"
+              lockfile="${{ steps.detect.outputs.lockfile }}"
+              cmd="${{ inputs.install-command }}"
+
+              if [ "$cmd" = "auto" ]; then
+                case "$pm" in
+                  npm)
+                    if [ -n "$lockfile" ]; then cmd="npm ci"; else cmd="npm install"; fi
+                    ;;
+                  pnpm)
+                    if [ -n "$lockfile" ]; then cmd="pnpm install --frozen-lockfile"; else cmd="pnpm install"; fi
+                    ;;
+                  yarn)
+                    if [ -n "$lockfile" ]; then
+                      if [ "$ver" = "1" ] || [[ "$ver" == 1.* ]]; then
+                        cmd="yarn install --frozen-lockfile"
+                      else
+                        cmd="yarn install --immutable"
+                      fi
+                    else
+                      cmd="yarn install"
+                    fi
+                    ;;
+                esac
+              fi
+
+              echo "install-command=$cmd" >> "$GITHUB_OUTPUT"
+              echo "Running: $cmd"
+              eval "$cmd"

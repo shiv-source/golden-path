@@ -1,0 +1,80 @@
+name: 'Deploy (Service)'
+
+on:
+    workflow_call:
+        inputs:
+            registry:
+                description: 'Container registry hostname (e.g., ghcr.io)'
+                type: string
+                default: ''
+            image-name:
+                description: 'Container image name'
+                type: string
+                required: true
+            dockerfile:
+                description: 'Path to Dockerfile'
+                type: string
+                default: 'Dockerfile'
+            context:
+                description: 'Docker build context'
+                type: string
+                default: '.'
+            deploy-command:
+                description: 'Deploy command override'
+                type: string
+                default: ''
+        secrets:
+            REGISTRY_TOKEN:
+                description: 'Container registry auth token'
+                required: true
+        outputs:
+            image:
+                description: 'Fully-qualified container image name (registry/owner/name)'
+                value: '${{ jobs.build-and-push.outputs.image }}'
+            digest:
+                description: 'Immutable image digest (sha256:...) for deployment pinning'
+                value: '${{ jobs.build-and-push.outputs.digest }}'
+            tags:
+                description: 'Image tags applied (newline-separated)'
+                value: '${{ jobs.build-and-push.outputs.tags }}'
+
+permissions:
+    contents: read
+    packages: write
+
+jobs:
+    build-and-push:
+        name: Build & Push
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        outputs:
+            image: '${{ steps.build.outputs.image }}'
+            digest: '${{ steps.build.outputs.digest }}'
+            tags: '${{ steps.build.outputs.tags }}'
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - id: build
+              uses: shiv-source/golden-path/.github/actions/docker-build-push@main
+              with:
+                  registry: ${{ inputs.registry }}
+                  image-name: ${{ inputs.image-name }}
+                  dockerfile: ${{ inputs.dockerfile }}
+                  context: ${{ inputs.context }}
+                  token: ${{ secrets.REGISTRY_TOKEN }}
+
+    deploy:
+        name: Deploy
+        if: ${{ inputs.deploy-command != '' }}
+        needs: [build-and-push]
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - name: Deploy
+              env:
+                  IMAGE: '${{ needs.build-and-push.outputs.image }}'
+                  DIGEST: '${{ needs.build-and-push.outputs.digest }}'
+                  TAGS: '${{ needs.build-and-push.outputs.tags }}'
+              run: '${{ inputs.deploy-command }}'

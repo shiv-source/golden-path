@@ -1,0 +1,16 @@
+name: 'Changed Files'
+description: 'Detect whether any changed files match the given glob patterns (PR-aware).'
+
+inputs:
+    paths:
+        description: 'JSON array of glob patterns to match against the diff'
+        required: false
+        default: '["**/*.go","go.mod","go.sum",".golangci.yaml",".github/"]'
+
+outputs:
+    changed:
+        description: 'true when any changed file matches a pattern (or on push/manual runs)'
+
+runs:
+    using: node20
+    main: dist/index.cjs

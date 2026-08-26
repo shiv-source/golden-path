@@ -1,0 +1,55 @@
+name: 'Renovate'
+
+on:
+    workflow_call:
+        inputs:
+            renovate-version:
+                description: 'Pinned Renovate version (full version for reproducibility)'
+                type: string
+                default: '44.26.0'
+            configuration-file:
+                description: 'Renovate config path in the consuming repo (empty = auto-detect renovate.json at repo root)'
+                type: string
+                default: ''
+            timeout-minutes:
+                description: 'Job timeout'
+                type: number
+                default: 30
+            use-github-token:
+                description: 'Use GITHUB_TOKEN (no PAT setup). CI on Renovate PRs will need manual approval.'
+                type: boolean
+                default: true
+        secrets:
+            RENOVATE_TOKEN:
+                description: 'Classic PAT (repo scope). Required only when use-github-token is false.'
+                required: false
+
+permissions:
+    contents: write
+    pull-requests: write
+
+jobs:
+    renovate:
+        name: Renovate
+        runs-on: ubuntu-latest
+        timeout-minutes: ${{ inputs.timeout-minutes }}
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+            - name: Run Renovate (auto-detected config)
+              if: inputs.configuration-file == ''
+              # renovatebot/github-action@v46.2.4
+              uses: renovatebot/github-action@5402b206248e5a8c8427a15102702eb9c1793efc
+              with:
+                  token: ${{ inputs.use-github-token && github.token || secrets.RENOVATE_TOKEN }}
+                  renovate-version: ${{ inputs.renovate-version }}
+
+            - name: Run Renovate (explicit config)
+              if: inputs.configuration-file != ''
+              # renovatebot/github-action@v46.2.4
+              uses: renovatebot/github-action@5402b206248e5a8c8427a15102702eb9c1793efc
+              with:
+                  token: ${{ inputs.use-github-token && github.token || secrets.RENOVATE_TOKEN }}
+                  renovate-version: ${{ inputs.renovate-version }}
+                  configurationFile: ${{ inputs.configuration-file }}

@@ -24,7 +24,7 @@ Profiles are collections of standardized config files. Each repo gets at least t
 | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `common` — `.editorconfig`, `CODEOWNERS`, `SECURITY.md`, `dependabot.yml`, issue templates, CI workflow | `node-library` — `.prettierrc`, `eslint.config.js`, `commitlint.config.js`, `tsconfig.json` |
 |                                                                                                         | `node-service` — node-library profiles + `Dockerfile`                                       |
-|                                                                                                         | `go-service` — `.golangci.yml`, `Dockerfile`                                                |
+|                                                                                                         | `go-service` — `.golangci.yaml`, `Dockerfile`                                               |
 
 ### Profile Mapping
 
@@ -45,10 +45,10 @@ The mapping from language + type → profiles lives in `scripts/lib/profile-map.
 
 ### Config-driven (recommended)
 
-Add a `.github/golden-path.yml` config file, then call the orchestrator with a one-job `ci.yml`:
+Add a `.github/golden-path.yaml` config file, then call the orchestrator with a one-job `ci.yaml`:
 
 ```yaml
-# .github/workflows/ci.yml
+# .github/workflows/ci.yaml
 name: CI
 on:
     push:
@@ -62,30 +62,47 @@ permissions:
 
 jobs:
     golden-path:
-        uses: your-org/golden-path/.github/workflows/golden-path-ci.yml@v1
+        uses: your-org/golden-path/.github/workflows/golden-path-ci.yaml@v1
         with:
-            config-path: .github/golden-path.yml
+            config-path: .github/golden-path.yaml
         secrets: inherit
 ```
 
 ```yaml
-# .github/golden-path.yml
-version: 1
-language: go
+# .github/golden-path.yaml
+version: 2
 
+# Go and Node are OPT-IN target lists: presence in the list enables the gate.
+# Each target has its own working-directory and overrides (add more for a
+# monorepo). Omit the list entirely to disable the gate.
 go:
-    enabled: true
-    go-version-file: go.mod # or go-version: 'stable'
-    working-directory: .
-    change-detection:
-        enabled: true
-        paths: ['**/*.go', 'go.mod', 'go.sum', '.golangci.yml', '.github/']
-    coverage-floor: 90 # 0 disables the coverage gate
-    cross-compile:
-        enabled: true
-        goos: [linux, darwin, windows]
-        goarch: [amd64, arm64]
-    final-gate: true
+    - go-version-file: go.mod # or go-version: 'stable'
+      working-directory: .
+      change-detection:
+          enabled: true
+          paths: ['**/*.go', 'go.mod', 'go.sum', '.golangci.yaml', '.github/']
+      coverage-floor: 90 # 0 disables the coverage gate
+      cross-compile:
+          enabled: true
+          goos: [linux, darwin, windows]
+          goarch: [amd64, arm64]
+      lint:
+          golangci-lint-version: v2.13.1
+          config: .golangci.yaml
+          timeout: 5m
+          args: ''
+      final-gate: true
+
+# Node.js targets:
+# node:
+#     - working-directory: .
+#       node-version: '22'
+#       package-manager: auto # auto | npm | pnpm | yarn
+#       shard-count: 3
+#       lint-command: npm run lint
+#       typecheck-command: npm run typecheck
+#       test-command: npm test
+#       build-command: npm run build
 
 security-scan: { enabled: true, language: go }
 secret-scan: { enabled: true, tool: betterleaks }
@@ -93,13 +110,20 @@ codespell: { enabled: true }
 actionlint: { enabled: true }
 ```
 
-The orchestrator reads the config, then conditionally runs the Go gates,
-security scan, secret scan, codespell, and actionlint. Set `enabled: false` to
-skip a gate; a missing config file uses defaults.
+The orchestrator reads the config, then runs one Go/Node gate **per configured
+target** plus the security scan, secret scan, codespell, and actionlint. Set
+`enabled: false` to skip a scan/linter; a missing config file enables no
+language gates (a single-language repo adds one target).
+
+> **Validation:** the config is validated against a strict JSON Schema
+> (`schemas/golden-path.schema.json`). Unknown keys and invalid values fail the
+> workflow with an actionable error instead of being silently ignored. Add
+> `$schema: https://github.com/shiv-source/golden-path/blob/main/schemas/golden-path.schema.json`
+> to your config for editor autocomplete.
 
 ### Direct workflow calls
 
-In your repo, create `.github/workflows/ci.yml`:
+In your repo, create `.github/workflows/ci.yaml`:
 
 ```yaml
 name: CI
@@ -111,11 +135,11 @@ on:
 
 jobs:
     build-test:
-        uses: your-org/golden-path/.github/workflows/build-test-node.yml@main
+        uses: your-org/golden-path/.github/workflows/build-test-node.yaml@main
         secrets: inherit
 
     security:
-        uses: your-org/golden-path/.github/workflows/security-scan.yml@main
+        uses: your-org/golden-path/.github/workflows/security-scan.yaml@main
         with:
             language: node
         secrets: inherit
@@ -123,13 +147,23 @@ jobs:
 
 ### Available Workflow Inputs
 
-**build-test-node.yml:**
+The language workflows (`build-test-go.yaml`, `build-test-node.yaml`) build a
+**single target** from explicit inputs. The orchestrator (`golden-path-ci.yaml`)
+is config-driven and fans out one run **per configured target** — most repos
+only ever call the orchestrator.
+
+**build-test-node.yaml:**
 
 - `node-version` (default: `22`)
+- `package-manager` (default: `auto` — `auto | npm | pnpm | yarn`)
 - `working-directory` (default: `.`)
 - `shard-count` (default: `3`)
+- `lint-command` (default: `npm run lint`)
+- `typecheck-command` (default: `npm run typecheck`)
+- `test-command` (default: `npm test`)
+- `build-command` (default: `npm run build`)
 
-**build-test-go.yml:**
+**build-test-go.yaml:**
 
 - `go-version` (default: `stable`)
 - `go-version-file` (default: `''` — pins Go from `go.mod`/`go.work`)
@@ -139,15 +173,19 @@ jobs:
 - `goos` (JSON array, default `["linux","darwin","windows"]`)
 - `goarch` (JSON array, default `["amd64","arm64"]`)
 - `change-detection` (boolean, default `false`)
-- `change-paths` (JSON array of globs, default `["**/*.go","go.mod","go.sum",".golangci.yml",".github/"]`)
+- `change-paths` (JSON array of globs, default `["**/*.go","go.mod","go.sum",".golangci.yaml",".github/"]`)
+- `golangci-lint-version` (default `v2.13.1`)
+- `golangci-lint-config` (default `.golangci.yaml`)
+- `golangci-lint-timeout` (default `5m`)
+- `golangci-lint-args` (default `''`)
 - `final-gate` (boolean, default `false` — emit a single aggregated required check)
 
-**security-scan.yml:**
+**security-scan.yaml:**
 
 - `language` (required: `node`, `go`, `python`, `java`)
 - `gitleaks-config` (default: built-in rules)
 
-**release-npm.yml:**
+**release-npm.yaml:**
 
 - `node-version` (default: `22`)
 - `registry` (default: `https://registry.npmjs.org`)
@@ -155,7 +193,7 @@ jobs:
 - `dry-run` (default: `false`)
 - **Secrets:** `NPM_TOKEN` (required)
 
-**deploy-service.yml:**
+**deploy-service.yaml:**
 
 - `registry` (default: repo owner)
 - `image-name` (required)
@@ -169,5 +207,5 @@ jobs:
 By default, workflows are pinned to `@main` — always get the latest. For stability, pin to a tag:
 
 ```yaml
-uses: your-org/golden-path/.github/workflows/build-test-node.yml@v1
+uses: your-org/golden-path/.github/workflows/build-test-node.yaml@v1
 ```

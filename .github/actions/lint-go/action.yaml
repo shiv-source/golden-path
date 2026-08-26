@@ -1,0 +1,89 @@
+name: 'Lint Go'
+description: 'Run golangci-lint with a pinned version, cached binary + analysis cache. Requires Go to already be installed (call setup-go first).'
+
+inputs:
+    golangci-lint-version:
+        description: 'golangci-lint release tag to install'
+        required: false
+        default: 'v2.13.1'
+    config:
+        description: 'Path to the golangci-lint config file, relative to the working directory'
+        required: false
+        default: '.golangci.yaml'
+    working-directory:
+        description: 'Working directory for the Go module'
+        required: false
+        default: '.'
+    timeout:
+        description: 'golangci-lint run timeout (e.g. 5m)'
+        required: false
+        default: '5m'
+    args:
+        description: 'Extra arguments passed to golangci-lint run'
+        required: false
+        default: ''
+    cache:
+        description: 'Cache the golangci-lint binary and analysis cache (true/false)'
+        required: false
+        default: 'true'
+
+outputs:
+    golangci-lint-version:
+        description: 'Installed golangci-lint version'
+        value: ${{ steps.run.outputs.version }}
+
+runs:
+    using: composite
+    steps:
+        - id: os-arch
+          name: Map runner to golangci-lint asset names
+          shell: bash
+          run: |
+              case "${{ runner.os }}" in
+                macOS) os=darwin ;;
+                Windows) os=windows ;;
+                *) os=linux ;;
+              esac
+              case "${{ runner.arch }}" in
+                ARM64) arch=arm64 ;;
+                *) arch=amd64 ;;
+              esac
+              echo "os=$os" >> "$GITHUB_OUTPUT"
+              echo "arch=$arch" >> "$GITHUB_OUTPUT"
+
+        - name: Install golangci-lint
+          uses: $/.github/actions/install-tool
+          with:
+              repo: golangci/golangci-lint
+              version: ${{ inputs.golangci-lint-version }}
+              asset: golangci-lint-{version-no-v}-{os}-{arch}.tar.gz
+              binary: golangci-lint
+              os: ${{ steps.os-arch.outputs.os }}
+              arch: ${{ steps.os-arch.outputs.arch }}
+              cache: ${{ inputs.cache }}
+
+        - id: cache
+          name: Restore golangci-lint analysis cache
+          if: inputs.cache == 'true'
+          # actions/cache@v6.1.0
+          uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+          with:
+              path: ~/.cache/golangci-lint
+              key: ${{ runner.os }}-golangci-lint-${{ inputs.golangci-lint-version }}-${{ hashFiles(format('{0}/{1}', inputs.working-directory, inputs.config)) }}
+              restore-keys: |
+                  ${{ runner.os }}-golangci-lint-${{ inputs.golangci-lint-version }}-
+                  ${{ runner.os }}-golangci-lint-
+
+        - id: run
+          name: Run golangci-lint
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: |
+              set -euo pipefail
+              echo "version=$(golangci-lint --version)" >> "$GITHUB_OUTPUT"
+              config="${{ inputs.config }}"
+              if [ -n "$config" ]; then
+                golangci-lint run --config "$config" --timeout "${{ inputs.timeout }}" ${{ inputs.args }}
+              else
+                golangci-lint run --timeout "${{ inputs.timeout }}" ${{ inputs.args }}
+              fi

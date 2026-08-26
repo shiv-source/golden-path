@@ -33,7 +33,7 @@ The `packages/shared/src/profile-map.ts` in `platform-hub` has the same mapping 
 
 ### Step 5: Create reusable workflow (optional)
 
-If the language needs specific CI, add a reusable workflow (e.g., `build-test-rust.yml`).
+If the language needs specific CI, add a reusable workflow (e.g., `build-test-rust.yaml`).
 
 ## Rolling Out Profile Updates
 
@@ -42,7 +42,7 @@ When you change a profile template (e.g., updating `eslint.config.js` in `node-l
 1. Make the change in `profiles/node-library/` and open a PR
 2. Merge to `main` — existing repos are NOT auto-updated
 3. To apply the update to repos:
-    - Use `workflow_dispatch` on `apply-repository-config.yml` for specific repos
+    - Use `workflow_dispatch` on `apply-repository-config.yaml` for specific repos
     - Or re-trigger onboarding for the affected repos
 4. Repos get a new PR with the updated files — team reviews and merges
 
@@ -50,7 +50,7 @@ When you change a profile template (e.g., updating `eslint.config.js` in `node-l
 
 ## Adding a New Reusable Workflow
 
-1. Create `./github/workflows/<name>.yml` with `on: workflow_call`
+1. Create `./github/workflows/<name>.yaml` with `on: workflow_call`
 2. Define inputs and secrets the consumer repos must provide
 3. Keep the workflow focused — one concern per file
 4. Document the inputs in `docs/developer-guide.md`
@@ -66,7 +66,7 @@ Admin access to the golden-path repo is managed through GitHub team membership:
 
 ## Compliance Requirements
 
-The `compliance-check.yml` workflow verifies:
+The `compliance-check.yaml` workflow verifies:
 
 - Required files exist (`.editorconfig`, `CODEOWNERS`, `SECURITY.md`)
 - Branch protection is enabled on the default branch
@@ -74,14 +74,14 @@ The `compliance-check.yml` workflow verifies:
 To add a new compliance requirement:
 
 1. Edit `scripts/compliance-check.mjs` to add the check
-2. Update the `required-files` input default in `compliance-check.yml`
+2. Update the `required-files` input default in `compliance-check.yaml`
 3. Repos will be checked on their next CI run
 
 ## Troubleshooting
 
 ### Onboarding PR was created but apply-config didn't run
 
-Check that `apply-repository-config.yml` has `push` → `paths: repositories/**`. The config file must be in the `repositories/` directory.
+Check that `apply-repository-config.yaml` has `push` → `paths: repositories/**`. The config file must be in the `repositories/` directory.
 
 ### "Repository does not exist" error
 

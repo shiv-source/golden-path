@@ -26,12 +26,12 @@
                              ▼
                    ┌──────────────────────┐
                    │  100+ target repos    │
-                   │ thin ci.yml each      │
+                   │ thin ci.yaml each      │
                    └──────────────────────┘
 ```
 
 `golden-path` is the org's internal developer platform **toolkit**. It is consumed by
-100+ repositories: each repo adds a thin `.github/workflows/ci.yml` that calls the
+100+ repositories: each repo adds a thin `.github/workflows/ci.yaml` that calls the
 reusable workflows and actions here via `uses: shiv-source/golden-path/…@main`.
 The platform dashboard, policy engine, and GitHub App live in the sibling repo
 `platform-hub`, which reads `repositories/*.yaml` through the GitHub API.
@@ -49,7 +49,7 @@ golden-path/
 │       ├── coverage-gate/         #   .github/actions/coverage-gate
 │       └── final-gate/            #   .github/actions/final-gate
 ├── .github/
-│   ├── actions/                   # action.yml manifests + committed dist/index.cjs bundles
+│   ├── actions/                   # action.yaml manifests + committed dist/index.cjs bundles
 │   ├── workflows/                 # 21 reusable + triggered workflows
 │   ├── ISSUE_TEMPLATE/            # repository-onboarding form
 │   └── PULL_REQUEST_TEMPLATE.md
@@ -67,40 +67,50 @@ golden-path/
 Pure YAML orchestration. Every workflow is `on: workflow_call` (or issue/push
 triggered) and delegates business logic to the TypeScript actions and `.mjs` scripts.
 
-| Workflow                      | Purpose                                                                                   |
-| ----------------------------- | ----------------------------------------------------------------------------------------- |
-| `golden-path-ci.yml`          | Config-driven CI orchestrator (entry point)                                               |
-| `build-test-node.yml`         | Node.js CI: lint → typecheck → test → build                                               |
-| `build-test-go.yml`           | Go CI: lint → vet → test → build (coverage + change detection)                            |
-| `security-scan.yml`           | CodeQL static analysis                                                                    |
-| `secret-scan-betterleaks.yml` | Secret scanning (Betterleaks)                                                             |
-| `secret-scan-ggshield.yml`    | Secret scanning (GitGuardian)                                                             |
-| `release-github.yml`          | GitHub Release (tag-driven)                                                               |
-| `release-npm.yml`             | npm publish                                                                               |
-| `release-github-npm.yml`      | GitHub Release → npm publish                                                              |
-| `deploy-service.yml`          | Docker build → push → deploy                                                              |
-| `dependency-update.yml`       | Dependabot auto-merge                                                                     |
-| `repository-onboarding.yml`   | Issue → validate → generate config → PR                                                   |
-| `apply-repository-config.yml` | Profile merge → PR into target repo                                                       |
-| `self-ci.yml`                 | Golden-path's own CI (lint, typecheck, test, format, dist check, actionlint, secret-scan) |
+| Workflow                       | Purpose                                                                                   |
+| ------------------------------ | ----------------------------------------------------------------------------------------- |
+| `golden-path-ci.yaml`          | Config-driven CI orchestrator (entry point)                                               |
+| `build-test-node.yaml`         | Node.js CI: lint → typecheck → test → build                                               |
+| `build-test-go.yaml`           | Go CI: lint → vet → test → build (coverage + change detection)                            |
+| `security-scan.yaml`           | CodeQL static analysis                                                                    |
+| `secret-scan-betterleaks.yaml` | Secret scanning (Betterleaks)                                                             |
+| `secret-scan-ggshield.yaml`    | Secret scanning (GitGuardian)                                                             |
+| `release-github.yaml`          | GitHub Release (tag-driven)                                                               |
+| `release-npm.yaml`             | npm publish                                                                               |
+| `release-github-npm.yaml`      | GitHub Release → npm publish                                                              |
+| `deploy-service.yaml`          | Docker build → push → deploy                                                              |
+| `dependency-update.yaml`       | Dependabot auto-merge                                                                     |
+| `repository-onboarding.yaml`   | Issue → validate → generate config → PR                                                   |
+| `apply-repository-config.yaml` | Profile merge → PR into target repo                                                       |
+| `self-ci.yaml`                 | Golden-path's own CI (lint, typecheck, test, format, dist check, actionlint, secret-scan) |
 
 The remaining workflows cover operational tooling: `actionlint`, `renovate`,
 `stale-issue`, `self-release`, `release-dry-run`, and `deploy-s3`.
 
 ## TypeScript Action Layer
 
-The six actions under `.github/actions/` are the reusable building blocks referenced
-by the workflows. Four are real **JavaScript actions** written in TypeScript; two are
-composite actions that orchestrate upstream tooling.
+The actions under `.github/actions/` are the reusable building blocks referenced
+by the workflows. Four are real **JavaScript actions** written in TypeScript; the
+rest are composite actions that orchestrate upstream tooling.
 
-| Action           | Type      | Purpose                                             |
-| ---------------- | --------- | --------------------------------------------------- |
-| `parse-config`   | JS (TS)   | Read `.github/golden-path.yml` → normalized outputs |
-| `changed-files`  | JS (TS)   | PR-aware change detection against globs             |
-| `coverage-gate`  | JS (TS)   | Run Go tests, enforce a coverage floor              |
-| `final-gate`     | JS (TS)   | Aggregate job results into one required check       |
-| `setup-go`       | composite | Install Go from a version or go.mod/go.work         |
-| `setup-go-cache` | composite | Install Go + cache module/build caches              |
+| Action                  | Type      | Purpose                                                         |
+| ----------------------- | --------- | --------------------------------------------------------------- |
+| `parse-config`          | JS (TS)   | Read `.github/golden-path.yaml` → validated, normalized outputs |
+| `changed-files`         | JS (TS)   | PR-aware change detection against globs                         |
+| `coverage-gate`         | JS (TS)   | Run Go tests, enforce a coverage floor                          |
+| `final-gate`            | JS (TS)   | Aggregate job results into one required check                   |
+| `setup-go`              | composite | Install Go from a version or go.mod/go.work (+ optional cache)  |
+| `setup-node`            | composite | Install Node + npm/pnpm/yarn with auto-detect, cache, install   |
+| `install-tool`          | composite | Download a pinned GitHub-release binary, cache it, add to PATH  |
+| `lint-go`               | composite | golangci-lint (pinned direct binary) + analysis cache           |
+| `codespell`             | composite | Spell check                                                     |
+| `actionlint`            | composite | GitHub Actions workflow linter                                  |
+| `betterleaks`           | composite | Secret scan over git history                                    |
+| `gitleaks`              | composite | Secret scan via gitleaks-action                                 |
+| `ggshield`              | composite | Secret scan via GitGuardian ggshield                            |
+| `docker-build-push`     | composite | Login → metadata → build & push a container image               |
+| `s3-deploy`             | composite | Configure AWS → s3 sync → CloudFront invalidation               |
+| `dependabot-auto-merge` | composite | Approve + auto-merge non-breaking Dependabot PRs                |
 
 Each TypeScript action follows the same pattern for testability:
 
@@ -126,14 +136,14 @@ Actions ship a committed `dist/index.cjs` bundle (esbuild, CommonJS, `target: no
   builtins (e.g. `tunnel` → `net`), which ESM bundles cannot handle. `index.cjs` is
   unambiguous under the repo's `"type": "module"` root.
 - Rebuild after changing any action source: `pnpm run build:actions`. CI
-  (`self-ci.yml` → `dist` job) fails when the committed bundle is stale.
+  (`self-ci.yaml` → `dist` job) fails when the committed bundle is stale.
 - Tests resolve `@golden-path/core` straight from `packages/core/src` (Vitest alias), so
   unit tests run without a build step.
 
 ## Onboarding Flow
 
 ```
-Developer → Issue Form → repository-onboarding.yml
+Developer → Issue Form → repository-onboarding.yaml
   ↓
 1. Parse issue body (parse-onboarding-issue.mjs)
 2. Validate repo exists in org (gh CLI)
@@ -143,7 +153,7 @@ Developer → Issue Form → repository-onboarding.yml
 6. Commit config → Open PR against golden-path main
 7. Comment on issue with PR link
   ↓
-PR Merged → apply-repository-config.yml triggers
+PR Merged → apply-repository-config.yaml triggers
   ↓
 1. Read repositories/<name>.yaml
 2. Resolve profiles → merged file list (merge-profiles.mjs)

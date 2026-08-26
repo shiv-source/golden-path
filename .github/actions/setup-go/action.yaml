@@ -1,0 +1,80 @@
+name: 'Setup Go'
+description: 'Install Go from a version or a go.mod/go.work file, optionally caching the Go module + build caches.'
+
+inputs:
+    go-version:
+        description: 'Go version to install (ignored when go-version-file is set)'
+        required: false
+        default: 'stable'
+    go-version-file:
+        description: 'Path to a go.mod or go.work file that pins the Go version'
+        required: false
+        default: ''
+    working-directory:
+        description: 'Working directory for the Go module (used for the cache key)'
+        required: false
+        default: '.'
+    cache:
+        description: 'Restore and save the Go module + build caches (true/false)'
+        required: false
+        default: 'true'
+
+outputs:
+    go-version:
+        description: 'Installed Go version'
+        value: ${{ steps.setup.outputs.go-version }}
+    cache-hit:
+        description: 'true when the cache was restored (matched the exact key)'
+        value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+    using: composite
+    steps:
+        - id: setup
+          shell: bash
+          run: |
+              if [ -n "${{ inputs.go-version-file }}" ]; then
+                echo "go-version=" >> "$GITHUB_OUTPUT"
+                echo "go-version-file=${{ inputs.go-version-file }}" >> "$GITHUB_OUTPUT"
+              else
+                echo "go-version=${{ inputs.go-version }}" >> "$GITHUB_OUTPUT"
+                echo "go-version-file=" >> "$GITHUB_OUTPUT"
+              fi
+
+        - name: Install Go
+          id: install
+          # actions/setup-go@v7.0.0
+          uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+          with:
+              go-version: ${{ steps.setup.outputs.go-version }}
+              go-version-file: ${{ steps.setup.outputs.go-version-file }}
+              cache-dependency-path: ${{ inputs.go-version-file }}
+              cache: false
+
+        - id: cache-paths
+          if: inputs.cache == 'true'
+          name: Compute cache paths
+          shell: bash
+          working-directory: ${{ inputs.working-directory }}
+          run: |
+              echo "gomodcache=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
+              # Go build cache locations differ per OS.
+              case "${{ runner.os }}" in
+                Windows) echo "gobuild=~\AppData\Local\go-build" >> "$GITHUB_OUTPUT" ;;
+                macOS)   echo "gobuild=~/Library/Caches/go-build" >> "$GITHUB_OUTPUT" ;;
+                *)       echo "gobuild=~/.cache/go-build" >> "$GITHUB_OUTPUT" ;;
+              esac
+
+        - id: cache
+          if: inputs.cache == 'true'
+          name: Restore go build/module cache
+          # actions/cache@v6.1.0
+          uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+          with:
+              path: |
+                  ${{ steps.cache-paths.outputs.gomodcache }}
+                  ${{ steps.cache-paths.outputs.gobuild }}
+              key: ${{ runner.os }}-go-${{ steps.setup.outputs.go-version }}-${{ hashFiles(format('{0}/go.sum', inputs.working-directory)) }}
+              restore-keys: |
+                  ${{ runner.os }}-go-${{ steps.setup.outputs.go-version }}-
+                  ${{ runner.os }}-go-

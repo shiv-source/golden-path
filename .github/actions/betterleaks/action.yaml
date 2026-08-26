@@ -1,0 +1,56 @@
+name: 'Betterleaks'
+description: 'Install a pinned betterleaks binary (cached) and run a secret scan against a git history or directory.'
+
+inputs:
+    version:
+        description: 'betterleaks release tag to install'
+        required: false
+        default: 'v1.8.1'
+    path:
+        description: 'Path to scan (git repo or directory)'
+        required: false
+        default: '.'
+    config:
+        description: 'Path to a betterleaks.toml config file'
+        required: false
+        default: ''
+    args:
+        description: 'Extra betterleaks arguments'
+        required: false
+        default: ''
+    cache:
+        description: 'Cache the betterleaks binary (true/false)'
+        required: false
+        default: 'true'
+
+outputs:
+    version:
+        description: 'Installed betterleaks version'
+        value: ${{ steps.run.outputs.version }}
+
+runs:
+    using: composite
+    steps:
+        - name: Install betterleaks
+          uses: $/.github/actions/install-tool
+          with:
+              repo: betterleaks/betterleaks
+              version: ${{ inputs.version }}
+              asset: betterleaks_{version-no-v}_linux_x64.tar.gz
+              binary: betterleaks
+              os: linux
+              arch: x64
+              cache: ${{ inputs.cache }}
+
+        - id: run
+          name: Run betterleaks
+          shell: bash
+          run: |
+              set -euo pipefail
+              echo "version=$(betterleaks --version 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+              config="${{ inputs.config }}"
+              if [ -n "$config" ]; then
+                betterleaks git "${{ inputs.path }}" --config="$config" ${{ inputs.args }}
+              else
+                betterleaks git "${{ inputs.path }}" ${{ inputs.args }}
+              fi

@@ -1,0 +1,163 @@
+name: 'Build & Test (Go)'
+
+on:
+    workflow_call:
+        inputs:
+            go-version:
+                description: 'Go version (ignored when go-version-file is set)'
+                type: string
+                default: 'stable'
+            go-version-file:
+                description: 'Path to go.mod or go.work that pins the Go version'
+                type: string
+                default: ''
+            working-directory:
+                description: 'Working directory for the Go module'
+                type: string
+                default: '.'
+            coverage-floor:
+                description: 'Minimum required total coverage percentage (0 disables the gate)'
+                type: number
+                default: 0
+            cross-compile:
+                description: 'Cross-compile the module for multiple GOOS/GOARCH combinations'
+                type: boolean
+                default: false
+            goos:
+                description: 'JSON array of GOOS targets to build when cross-compile is enabled'
+                type: string
+                default: '["linux","darwin","windows"]'
+            goarch:
+                description: 'JSON array of GOARCH targets to build when cross-compile is enabled'
+                type: string
+                default: '["amd64","arm64"]'
+            change-detection:
+                description: 'Skip Go gates when no matching files changed on a pull request'
+                type: boolean
+                default: false
+            change-paths:
+                description: 'JSON array of glob patterns used for change detection'
+                type: string
+                default: '["**/*.go","go.mod","go.sum",".golangci.yaml",".github/"]'
+            golangci-lint-version:
+                description: 'golangci-lint release tag'
+                type: string
+                default: 'v2.13.1'
+            golangci-lint-config:
+                description: 'Path to the golangci-lint config file'
+                type: string
+                default: '.golangci.yaml'
+            golangci-lint-timeout:
+                description: 'golangci-lint run timeout'
+                type: string
+                default: '5m'
+            golangci-lint-args:
+                description: 'Extra golangci-lint arguments'
+                type: string
+                default: ''
+            final-gate:
+                description: 'Emit a single aggregated required check'
+                type: boolean
+                default: false
+
+        outputs:
+            coverage:
+                description: 'Total test coverage percentage'
+                value: ${{ jobs.test.outputs.coverage }}
+
+permissions:
+    contents: read
+
+jobs:
+    changes:
+        if: inputs.change-detection
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        outputs:
+            go: ${{ steps.changed.outputs.changed }}
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+              with:
+                  fetch-depth: 0
+            - id: changed
+              uses: shiv-source/golden-path/.github/actions/changed-files@main
+              with:
+                  paths: ${{ inputs.change-paths }}
+
+    lint:
+        needs: [changes]
+        if: ${{ !inputs.change-detection || needs.changes.outputs.go == 'true' }}
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - uses: shiv-source/golden-path/.github/actions/setup-go@main
+              with:
+                  go-version: ${{ inputs.go-version }}
+                  go-version-file: ${{ inputs.go-version-file }}
+                  working-directory: ${{ inputs.working-directory }}
+            - uses: shiv-source/golden-path/.github/actions/lint-go@main
+              with:
+                  working-directory: ${{ inputs.working-directory }}
+                  golangci-lint-version: ${{ inputs.golangci-lint-version }}
+                  config: ${{ inputs.golangci-lint-config }}
+                  timeout: ${{ inputs.golangci-lint-timeout }}
+                  args: ${{ inputs.golangci-lint-args }}
+
+    test:
+        needs: [changes]
+        if: ${{ !inputs.change-detection || needs.changes.outputs.go == 'true' }}
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        outputs:
+            coverage: ${{ steps.coverage.outputs.coverage }}
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - uses: shiv-source/golden-path/.github/actions/setup-go@main
+              with:
+                  go-version: ${{ inputs.go-version }}
+                  go-version-file: ${{ inputs.go-version-file }}
+                  working-directory: ${{ inputs.working-directory }}
+            - name: Test with coverage gate
+              id: coverage
+              uses: shiv-source/golden-path/.github/actions/coverage-gate@main
+              with:
+                  working-directory: ${{ inputs.working-directory }}
+                  floor: ${{ inputs.coverage-floor }}
+
+    build:
+        needs: [changes]
+        if: ${{ !inputs.change-detection || needs.changes.outputs.go == 'true' }}
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        strategy:
+            fail-fast: false
+            matrix:
+                goos: ${{ inputs.cross-compile && fromJSON(inputs.goos) || fromJSON('["linux"]') }}
+                goarch: ${{ inputs.cross-compile && fromJSON(inputs.goarch) || fromJSON('["amd64"]') }}
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - uses: shiv-source/golden-path/.github/actions/setup-go@main
+              with:
+                  go-version: ${{ inputs.go-version }}
+                  go-version-file: ${{ inputs.go-version-file }}
+                  working-directory: ${{ inputs.working-directory }}
+            - name: Build (${{ matrix.goos }}/${{ matrix.goarch }})
+              run: GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build ./...
+              working-directory: ${{ inputs.working-directory }}
+
+    final-gate:
+        if: ${{ always() && inputs.final-gate }}
+        needs: [lint, test, build]
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - name: Aggregate results
+              uses: shiv-source/golden-path/.github/actions/final-gate@main
+              with:
+                  results: ${{ format('lint={0} test={1} build={2}', needs.lint.result, needs.test.result, needs.build.result) }}
+                  coverage: ${{ needs.test.outputs.coverage }}

@@ -1,4 +1,4 @@
 paths:
-    .github/workflows/release-github-npm.yml:
+    .github/workflows/release-github-npm.yaml:
         ignore:
             - 'property ".+" is not defined in object type'

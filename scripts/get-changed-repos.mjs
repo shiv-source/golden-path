@@ -1,6 +1,6 @@
 // Determine which repository configs changed in the latest push.
 // Returns repo names extracted from changed files in repositories/.
-// Used by apply-repository-config.yml.
+// Used by apply-repository-config.yaml.
 
 import { execSync } from 'node:child_process';
 import { basename } from 'node:path';

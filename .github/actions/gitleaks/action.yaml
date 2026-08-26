@@ -1,0 +1,22 @@
+name: 'Gitleaks'
+description: 'Run gitleaks secret scanning against the checked-out repository.'
+
+inputs:
+    config:
+        description: 'Path to a custom gitleaks config (defaults to built-in rules)'
+        required: false
+        default: ''
+    args:
+        description: 'Extra arguments passed to gitleaks'
+        required: false
+        default: ''
+
+runs:
+    using: composite
+    steps:
+        - name: Gitleaks scan
+          # gitleaks/gitleaks-action@v3.0.0
+          uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e
+          with:
+              config-path: ${{ inputs.config }}
+              args: ${{ inputs.args }}

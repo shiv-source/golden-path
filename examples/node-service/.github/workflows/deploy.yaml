@@ -1,0 +1,19 @@
+name: Deploy
+on:
+    workflow_dispatch:
+    push:
+        tags: ['v*']
+
+permissions:
+    contents: read
+    packages: write
+
+jobs:
+    deploy:
+        uses: shiv-source/golden-path/.github/workflows/deploy-service.yaml@v1
+        with:
+            image-name: node-service
+            dockerfile: Dockerfile
+            context: .
+        secrets:
+            REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}

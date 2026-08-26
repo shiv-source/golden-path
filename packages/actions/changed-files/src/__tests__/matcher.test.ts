@@ -7,24 +7,24 @@ describe('makeMatcher', () => {
         expect(isMatch('agent.go')).toBe(true);
         expect(isMatch('internal/agent.go')).toBe(true);
         expect(isMatch('agent.txt')).toBe(false);
-        expect(isMatch('.github/workflows/ci.yml')).toBe(true);
+        expect(isMatch('.github/workflows/ci.yaml')).toBe(true);
         expect(isMatch('.gitignore')).toBe(false);
     });
 
     it('matches dotfiles with an explicit dot pattern', () => {
-        const isMatch = makeMatcher(['.golangci.yml']);
-        expect(isMatch('.golangci.yml')).toBe(true);
+        const isMatch = makeMatcher(['.golangci.yaml']);
+        expect(isMatch('.golangci.yaml')).toBe(true);
     });
 
     it('normalizes a trailing-slash directory pattern', () => {
         const isMatch = makeMatcher(['.github/']);
-        expect(isMatch('.github/workflows/ci.yml')).toBe(true);
+        expect(isMatch('.github/workflows/ci.yaml')).toBe(true);
         expect(isMatch('src/index.ts')).toBe(false);
     });
 });
 
 describe('matchesAny', () => {
-    const patterns = ['**/*.go', 'go.mod', 'go.sum', '.golangci.yml', '.github/'];
+    const patterns = ['**/*.go', 'go.mod', 'go.sum', '.golangci.yaml', '.github/'];
 
     it('matches a Go source change', () => {
         expect(matchesAny(patterns, ['internal/agent.go'])).toBe(true);
@@ -35,7 +35,7 @@ describe('matchesAny', () => {
     });
 
     it('matches a workflow change', () => {
-        expect(matchesAny(patterns, ['.github/workflows/ci.yml'])).toBe(true);
+        expect(matchesAny(patterns, ['.github/workflows/ci.yaml'])).toBe(true);
     });
 
     it('does not match unrelated files', () => {

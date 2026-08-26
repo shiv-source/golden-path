@@ -1,0 +1,44 @@
+name: 'Codespell'
+
+on:
+    workflow_call:
+        inputs:
+            version:
+                description: 'Codespell version (pip installable)'
+                type: string
+                default: '2.4.3'
+            path:
+                description: 'Path to check (defaults to entire repo)'
+                type: string
+                default: '.'
+            ignore-words-file:
+                description: 'Path to a custom ignore-words file'
+                type: string
+                default: ''
+            skip:
+                description: 'Comma-separated paths to skip'
+                type: string
+                default: '.git,node_modules,dist,build,vendor,package-lock.json,*.lock,*.sum'
+            args:
+                description: 'Additional codespell arguments'
+                type: string
+                default: ''
+
+permissions:
+    contents: read
+
+jobs:
+    check:
+        name: Spell Check
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - uses: shiv-source/golden-path/.github/actions/codespell@main
+              with:
+                  version: ${{ inputs.version }}
+                  path: ${{ inputs.path }}
+                  ignore-words-file: ${{ inputs.ignore-words-file }}
+                  skip: ${{ inputs.skip }}
+                  args: ${{ inputs.args }}

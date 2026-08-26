@@ -1,0 +1,48 @@
+name: 'Codespell'
+description: 'Install a pinned codespell version and run a spell check.'
+
+inputs:
+    version:
+        description: 'codespell version (pip installable)'
+        required: false
+        default: '2.4.3'
+    path:
+        description: 'Path to check (defaults to entire repo)'
+        required: false
+        default: '.'
+    ignore-words-file:
+        description: 'Path to a custom ignore-words file'
+        required: false
+        default: ''
+    skip:
+        description: 'Comma-separated paths to skip'
+        required: false
+        default: '.git,node_modules,dist,build,vendor,package-lock.json,*.lock,*.sum'
+    args:
+        description: 'Extra codespell arguments'
+        required: false
+        default: ''
+
+runs:
+    using: composite
+    steps:
+        - name: Install Python
+          # actions/setup-python@v7.0.0
+          uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+          with:
+              python-version: '3.12'
+
+        - name: Install uv and codespell
+          shell: bash
+          run: |
+              pip install uv
+              uv pip install --system codespell==${{ inputs.version }}
+
+        - name: Run codespell
+          shell: bash
+          run: |
+              codespell \
+                "${{ inputs.path }}" \
+                ${{ inputs.ignore-words-file && format('--ignore-words {0}', inputs.ignore-words-file) || '' }} \
+                --skip '${{ inputs.skip }}' \
+                ${{ inputs.args }}

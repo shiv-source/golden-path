@@ -1,0 +1,64 @@
+name: 'Deploy to S3'
+description: 'Configure AWS credentials, sync a directory to S3, and optionally invalidate CloudFront.'
+
+inputs:
+    aws-role-arn:
+        description: 'IAM role ARN for OIDC authentication (preferred). Falls back to access keys if empty.'
+        required: false
+        default: ''
+    aws-region:
+        description: 'AWS region'
+        required: false
+        default: 'us-east-1'
+    s3-bucket:
+        description: 'S3 bucket name'
+        required: true
+    s3-prefix:
+        description: 'Prefix/path within the bucket (empty = root)'
+        required: false
+        default: ''
+    source-dir:
+        description: 'Local directory to upload'
+        required: false
+        default: 'dist'
+    cache-control:
+        description: 'Cache-Control header for uploaded files'
+        required: false
+        default: 'public, max-age=31536000, immutable'
+    cloudfront-distribution:
+        description: 'CloudFront distribution ID (skip invalidation if empty)'
+        required: false
+        default: ''
+    invalidation-path:
+        description: 'CloudFront invalidation path'
+        required: false
+        default: '/*'
+    delete-removed:
+        description: 'Delete files from S3 that do not exist locally'
+        required: false
+        default: 'true'
+
+runs:
+    using: composite
+    steps:
+        - name: Configure AWS credentials
+          # aws-actions/configure-aws-credentials@v6.2.3
+          uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c
+          with:
+              role-to-assume: ${{ inputs.aws-role-arn }}
+              aws-region: ${{ inputs.aws-region }}
+
+        - name: Sync to S3
+          shell: bash
+          run: |
+              aws s3 sync "${{ inputs.source-dir }}" "s3://${{ inputs.s3-bucket }}/${{ inputs.s3-prefix }}" \
+                --cache-control "${{ inputs.cache-control }}" \
+                ${{ inputs.delete-removed == 'true' && '--delete' || '' }}
+
+        - name: Invalidate CloudFront
+          if: inputs.cloudfront-distribution != ''
+          shell: bash
+          run: |
+              aws cloudfront create-invalidation \
+                --distribution-id "${{ inputs.cloudfront-distribution }}" \
+                --paths "${{ inputs.invalidation-path }}"

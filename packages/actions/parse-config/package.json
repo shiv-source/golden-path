@@ -3,7 +3,7 @@
     "version": "0.0.0",
     "private": true,
     "type": "module",
-    "description": "TypeScript action: parse .github/golden-path.yml into normalized outputs.",
+    "description": "TypeScript action: parse .github/golden-path.yaml into normalized outputs.",
     "scripts": {
         "typecheck": "tsc -p tsconfig.json --noEmit",
         "test": "vitest run"
