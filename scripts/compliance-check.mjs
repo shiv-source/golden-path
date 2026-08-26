@@ -12,39 +12,39 @@ import { ghSh } from './lib/gh.mjs';
  * @returns {Promise<{ passed: boolean, missingFiles: string[], branchProtected: boolean, errors: string[] }>}
  */
 export async function complianceCheck(opts) {
-  const { workspace, requiredFiles, checkBranchProtection, repo } = opts;
-  const errors = [];
-  const missingFiles = [];
-  let branchProtected = false;
+    const { workspace, requiredFiles, checkBranchProtection, repo } = opts;
+    const errors = [];
+    const missingFiles = [];
+    let branchProtected = false;
 
-  // Check required files
-  const { existsSync } = await import('node:fs');
-  const { resolve } = await import('node:path');
+    // Check required files
+    const { existsSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
 
-  for (const file of requiredFiles) {
-    if (!existsSync(resolve(workspace, file))) {
-      missingFiles.push(file);
-      errors.push(`Missing required file: ${file}`);
+    for (const file of requiredFiles) {
+        if (!existsSync(resolve(workspace, file))) {
+            missingFiles.push(file);
+            errors.push(`Missing required file: ${file}`);
+        }
     }
-  }
 
-  // Check branch protection
-  if (checkBranchProtection && repo) {
-    try {
-      const result = await ghSh(`api repos/${repo}/branches/HEAD/protection --jq '.url // empty'`);
-      branchProtected = result.length > 0;
-      if (!branchProtected) {
-        errors.push('Branch protection is not enabled on the default branch');
-      }
-    } catch {
-      errors.push('Failed to check branch protection');
+    // Check branch protection
+    if (checkBranchProtection && repo) {
+        try {
+            const result = await ghSh(`api repos/${repo}/branches/HEAD/protection --jq '.url // empty'`);
+            branchProtected = result.length > 0;
+            if (!branchProtected) {
+                errors.push('Branch protection is not enabled on the default branch');
+            }
+        } catch {
+            errors.push('Failed to check branch protection');
+        }
     }
-  }
 
-  return {
-    passed: missingFiles.length === 0 && (branchProtected || !checkBranchProtection),
-    missingFiles,
-    branchProtected,
-    errors,
-  };
+    return {
+        passed: missingFiles.length === 0 && (branchProtected || !checkBranchProtection),
+        missingFiles,
+        branchProtected,
+        errors,
+    };
 }

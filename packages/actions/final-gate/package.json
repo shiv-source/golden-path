@@ -1,0 +1,15 @@
+{
+    "name": "@golden-path/action-final-gate",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "description": "TypeScript action: aggregate job results into a single required check.",
+    "scripts": {
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@actions/core": "3.0.1",
+        "@golden-path/core": "workspace:*"
+    }
+}

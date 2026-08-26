@@ -1,0 +1,28 @@
+name: 'Parse Golden Path Config'
+description: 'Parse .github/golden-path.yml into normalized outputs used by the golden-path CI orchestrator.'
+
+inputs:
+    config-path:
+        description: 'Path to the golden-path config file'
+        required: false
+        default: '.github/golden-path.yml'
+
+outputs:
+    config:
+        description: 'Normalized config as a JSON string'
+    language:
+        description: 'Primary language detected from the config'
+    go_enabled:
+        description: 'Whether the Go build/test gate is enabled'
+    security_enabled:
+        description: 'Whether the security scan is enabled'
+    secret_scan_enabled:
+        description: 'Whether the secret scan is enabled'
+    codespell_enabled:
+        description: 'Whether the codespell check is enabled'
+    actionlint_enabled:
+        description: 'Whether the actionlint check is enabled'
+
+runs:
+    using: node20
+    main: dist/index.cjs

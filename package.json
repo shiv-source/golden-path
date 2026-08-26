@@ -1,24 +1,33 @@
 {
-  "name": "golden-path",
-  "private": true,
-  "type": "module",
-  "description": "Internal developer platform — reusable workflows, profiles, and onboarding for org-wide GitHub standardization.",
-  "engines": {
-    "node": ">=22"
-  },
-  "scripts": {
-    "lint": "eslint scripts/",
-    "lint:workflows": "actionlint .github/workflows/*.yml",
-    "test": "node --test 'scripts/test/**/*.test.mjs'",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "prepare": "husky"
-  },
-  "devDependencies": {
-    "@commitlint/cli": "21.2.1",
-    "@commitlint/config-conventional": "21.2.0",
-    "eslint": "10.8.0",
-    "husky": "9.1.7",
-    "prettier": "3.9.6"
-  }
+    "name": "golden-path",
+    "private": true,
+    "type": "module",
+    "description": "Internal developer platform — reusable workflows, profiles, and onboarding for org-wide GitHub standardization.",
+    "engines": {
+        "node": ">=22"
+    },
+    "scripts": {
+        "build:actions": "node scripts/build-actions.mjs",
+        "lint": "eslint scripts/ packages/",
+        "lint:workflows": "actionlint .github/workflows/*.yml",
+        "typecheck": "pnpm -r typecheck",
+        "test": "pnpm run test:actions && pnpm run test:scripts",
+        "test:actions": "vitest run",
+        "test:scripts": "node --test 'scripts/test/**/*.test.mjs'",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "prepare": "husky"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "21.2.1",
+        "@commitlint/config-conventional": "21.2.0",
+        "@types/node": "26.3.0",
+        "esbuild": "0.25.5",
+        "eslint": "9.39.5",
+        "husky": "9.1.7",
+        "prettier": "3.9.6",
+        "typescript": "6.0.3",
+        "typescript-eslint": "8.68.0",
+        "vitest": "4.1.11"
+    }
 }

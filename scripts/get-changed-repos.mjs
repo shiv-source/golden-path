@@ -10,11 +10,11 @@ import { basename } from 'node:path';
  * @returns {string[]}
  */
 export function getChangedRepos(before = 'HEAD~1', after = 'HEAD') {
-  const changed = execSync(`git diff --name-only ${before} ${after} -- repositories/`)
-    .toString()
-    .trim()
-    .split('\n')
-    .filter(Boolean);
+    const changed = execSync(`git diff --name-only ${before} ${after} -- repositories/`)
+        .toString()
+        .trim()
+        .split('\n')
+        .filter(Boolean);
 
-  return changed.map((f) => basename(f, '.yaml'));
+    return changed.map((f) => basename(f, '.yaml'));
 }

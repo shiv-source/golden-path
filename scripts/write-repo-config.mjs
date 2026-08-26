@@ -16,11 +16,11 @@ import { resolveProfilesFor } from './lib/profile-map.mjs';
  * @returns {{ profiles: string[] }}
  */
 export function writeRepoConfig({ workspace, repoName, type, language, options }) {
-  const yaml = generateRepoConfig({ repoName, type, language, options });
-  const filePath = join(workspace, 'repositories', `${repoName}.yaml`);
-  writeFile(filePath, yaml);
+    const yaml = generateRepoConfig({ repoName, type, language, options });
+    const filePath = join(workspace, 'repositories', `${repoName}.yaml`);
+    writeFile(filePath, yaml);
 
-  return {
-    profiles: resolveProfilesFor(language, type),
-  };
+    return {
+        profiles: resolveProfilesFor(language, type),
+    };
 }

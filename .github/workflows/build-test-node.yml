@@ -1,116 +1,116 @@
 name: 'Build & Test (Node.js)'
 
 on:
-  workflow_call:
-    inputs:
-      node-version:
-        description: 'Node.js version'
-        type: string
-        default: '22'
-      working-directory:
-        description: 'Working directory for the Node.js project'
-        type: string
-        default: '.'
-      shard-count:
-        description: 'Number of test shards for parallel execution'
-        type: number
-        default: 3
-      build-command:
-        description: 'Build command override'
-        type: string
-        default: 'npm run build'
+    workflow_call:
+        inputs:
+            node-version:
+                description: 'Node.js version'
+                type: string
+                default: '22'
+            working-directory:
+                description: 'Working directory for the Node.js project'
+                type: string
+                default: '.'
+            shard-count:
+                description: 'Number of test shards for parallel execution'
+                type: number
+                default: 3
+            build-command:
+                description: 'Build command override'
+                type: string
+                default: 'npm run build'
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  setup:
-    name: Setup Shards
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    outputs:
-      shards: '${{ steps.shards.outputs.shards }}'
-    steps:
-      - name: Generate shard list
-        id: shards
-        run: |
-          SHARDS=$(seq -s, 1 ${{ inputs.shard-count }})
-          echo "shards=[$SHARDS]" >> "$GITHUB_OUTPUT"
+    setup:
+        name: Setup Shards
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        outputs:
+            shards: '${{ steps.shards.outputs.shards }}'
+        steps:
+            - name: Generate shard list
+              id: shards
+              run: |
+                  SHARDS=$(seq -s, 1 ${{ inputs.shard-count }})
+                  echo "shards=[$SHARDS]" >> "$GITHUB_OUTPUT"
 
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '${{ inputs.node-version }}'
-          cache: 'npm'
-          cache-dependency-path: '${{ inputs.working-directory }}/package-lock.json'
-      - name: Install dependencies
-        run: npm ci
-        working-directory: '${{ inputs.working-directory }}'
-      - name: Lint
-        run: npm run lint
-        working-directory: '${{ inputs.working-directory }}'
+    lint:
+        name: Lint
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '${{ inputs.node-version }}'
+                  cache: 'npm'
+                  cache-dependency-path: '${{ inputs.working-directory }}/package-lock.json'
+            - name: Install dependencies
+              run: npm ci
+              working-directory: '${{ inputs.working-directory }}'
+            - name: Lint
+              run: npm run lint
+              working-directory: '${{ inputs.working-directory }}'
 
-  typecheck:
-    name: Type Check
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '${{ inputs.node-version }}'
-          cache: 'npm'
-          cache-dependency-path: '${{ inputs.working-directory }}/package-lock.json'
-      - name: Install dependencies
-        run: npm ci
-        working-directory: '${{ inputs.working-directory }}'
-      - name: Type check
-        run: npm run typecheck
-        working-directory: '${{ inputs.working-directory }}'
+    typecheck:
+        name: Type Check
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '${{ inputs.node-version }}'
+                  cache: 'npm'
+                  cache-dependency-path: '${{ inputs.working-directory }}/package-lock.json'
+            - name: Install dependencies
+              run: npm ci
+              working-directory: '${{ inputs.working-directory }}'
+            - name: Type check
+              run: npm run typecheck
+              working-directory: '${{ inputs.working-directory }}'
 
-  test:
-    name: Test (shard ${{ matrix.shard }})
-    needs: [setup]
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: ${{ fromJSON(needs.setup.outputs.shards) }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '${{ inputs.node-version }}'
-          cache: 'npm'
-          cache-dependency-path: '${{ inputs.working-directory }}/package-lock.json'
-      - name: Install dependencies
-        run: npm ci
-        working-directory: '${{ inputs.working-directory }}'
-      - name: Test
-        run: npm test -- --test-shard=${{ matrix.shard }}/${{ inputs.shard-count }}
-        working-directory: '${{ inputs.working-directory }}'
+    test:
+        name: Test (shard ${{ matrix.shard }})
+        needs: [setup]
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        strategy:
+            fail-fast: false
+            matrix:
+                shard: ${{ fromJSON(needs.setup.outputs.shards) }}
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '${{ inputs.node-version }}'
+                  cache: 'npm'
+                  cache-dependency-path: '${{ inputs.working-directory }}/package-lock.json'
+            - name: Install dependencies
+              run: npm ci
+              working-directory: '${{ inputs.working-directory }}'
+            - name: Test
+              run: npm test -- --test-shard=${{ matrix.shard }}/${{ inputs.shard-count }}
+              working-directory: '${{ inputs.working-directory }}'
 
-  build:
-    name: Build
-    needs: [lint, typecheck, test]
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '${{ inputs.node-version }}'
-          cache: 'npm'
-          cache-dependency-path: '${{ inputs.working-directory }}/package-lock.json'
-      - name: Install dependencies
-        run: npm ci
-        working-directory: '${{ inputs.working-directory }}'
-      - name: Build
-        run: '${{ inputs.build-command }}'
-        working-directory: '${{ inputs.working-directory }}'
+    build:
+        name: Build
+        needs: [lint, typecheck, test]
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '${{ inputs.node-version }}'
+                  cache: 'npm'
+                  cache-dependency-path: '${{ inputs.working-directory }}/package-lock.json'
+            - name: Install dependencies
+              run: npm ci
+              working-directory: '${{ inputs.working-directory }}'
+            - name: Build
+              run: '${{ inputs.build-command }}'
+              working-directory: '${{ inputs.working-directory }}'

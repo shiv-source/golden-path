@@ -13,26 +13,26 @@ import { openOrReusePR } from './open-or-reuse-pr.mjs';
  * @returns {Promise<{ url: string, reused: boolean }>}
  */
 export async function createOnboardingPR({ repoName, language, type, profiles }) {
-  configureGit();
-  const branch = `feature/onboard-${repoName}`;
-  commitAndPush({ branch, message: `chore: onboard ${repoName}`, files: 'repositories/' });
+    configureGit();
+    const branch = `feature/onboard-${repoName}`;
+    commitAndPush({ branch, message: `chore: onboard ${repoName}`, files: 'repositories/' });
 
-  return openOrReusePR({
-    repo: process.env.GITHUB_REPOSITORY ?? '',
-    baseBranch: 'main',
-    headBranch: branch,
-    title: `Onboard ${repoName}`,
-    body: [
-      '## Repository Onboarding',
-      '',
-      `**Repository:** \`${repoName}\``,
-      `**Language:** ${language}`,
-      `**Type:** ${type}`,
-      `**Profiles:** ${profiles.join(', ')}`,
-      '',
-      `Generated \`repositories/${repoName}.yaml\`.`,
-      '',
-      'Once merged, `apply-repository-config.yml` will apply the standard configuration.',
-    ].join('\n'),
-  });
+    return openOrReusePR({
+        repo: process.env.GITHUB_REPOSITORY ?? '',
+        baseBranch: 'main',
+        headBranch: branch,
+        title: `Onboard ${repoName}`,
+        body: [
+            '## Repository Onboarding',
+            '',
+            `**Repository:** \`${repoName}\``,
+            `**Language:** ${language}`,
+            `**Type:** ${type}`,
+            `**Profiles:** ${profiles.join(', ')}`,
+            '',
+            `Generated \`repositories/${repoName}.yaml\`.`,
+            '',
+            'Once merged, `apply-repository-config.yml` will apply the standard configuration.',
+        ].join('\n'),
+    });
 }

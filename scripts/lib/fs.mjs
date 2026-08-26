@@ -8,6 +8,6 @@ import { dirname } from 'node:path';
  * @param {string} content - file content
  */
 export function writeFile(filePath, content) {
-  mkdirSync(dirname(filePath), { recursive: true });
-  writeFileSync(filePath, content);
+    mkdirSync(dirname(filePath), { recursive: true });
+    writeFileSync(filePath, content);
 }

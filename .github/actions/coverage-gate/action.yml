@@ -1,0 +1,24 @@
+name: 'Coverage Gate'
+description: 'Run Go tests with coverage and fail when total coverage is below the configured floor.'
+
+inputs:
+    working-directory:
+        description: 'Working directory for the Go module'
+        required: false
+        default: '.'
+    floor:
+        description: 'Minimum required total coverage percentage (0 disables the gate)'
+        required: false
+        default: '0'
+    test-args:
+        description: 'Extra arguments passed to go test'
+        required: false
+        default: '-race -coverprofile=coverage.out ./...'
+
+outputs:
+    coverage:
+        description: 'Total coverage percentage as a string (e.g. 94.2)'
+
+runs:
+    using: node20
+    main: dist/index.cjs

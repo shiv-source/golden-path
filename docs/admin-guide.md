@@ -8,10 +8,10 @@ Edit `scripts/lib/profile-map.mjs`:
 
 ```javascript
 const PROFILE_MAP = {
-  // ...existing...
-  rust: {
-    service: ['common', 'rust-service'],
-  },
+    // ...existing...
+    rust: {
+        service: ['common', 'rust-service'],
+    },
 };
 ```
 
@@ -42,8 +42,8 @@ When you change a profile template (e.g., updating `eslint.config.js` in `node-l
 1. Make the change in `profiles/node-library/` and open a PR
 2. Merge to `main` — existing repos are NOT auto-updated
 3. To apply the update to repos:
-   - Use `workflow_dispatch` on `apply-repository-config.yml` for specific repos
-   - Or re-trigger onboarding for the affected repos
+    - Use `workflow_dispatch` on `apply-repository-config.yml` for specific repos
+    - Or re-trigger onboarding for the affected repos
 4. Repos get a new PR with the updated files — team reviews and merges
 
 > **Design choice:** Profile updates are pull-based, not push-based. Teams own their repos and review config changes. This prevents surprise breakage.

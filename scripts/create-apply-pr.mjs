@@ -13,44 +13,38 @@ import { openOrReusePR } from './open-or-reuse-pr.mjs';
  * @param {string} opts.conflictsList
  * @returns {Promise<{ url: string, reused: boolean }>}
  */
-export async function createApplyPR({
-  targetDir,
-  repo,
-  filesCopied,
-  conflictsFound,
-  conflictsList,
-}) {
-  configureGit(targetDir);
-  const branch = 'feature/apply-org-config';
-  const { skipped } = commitAndPush({
-    branch,
-    cwd: targetDir,
-    message: 'chore: apply organization standard configuration',
-  });
+export async function createApplyPR({ targetDir, repo, filesCopied, conflictsFound, conflictsList }) {
+    configureGit(targetDir);
+    const branch = 'feature/apply-org-config';
+    const { skipped } = commitAndPush({
+        branch,
+        cwd: targetDir,
+        message: 'chore: apply organization standard configuration',
+    });
 
-  if (skipped) {
-    console.log('No changes — skipping PR.');
-    return { url: '', reused: true };
-  }
+    if (skipped) {
+        console.log('No changes — skipping PR.');
+        return { url: '', reused: true };
+    }
 
-  const conflicts = conflictsFound ? '\n### ⚠️ Conflicts Detected\n\n' + conflictsList + '\n' : '';
+    const conflicts = conflictsFound ? '\n### ⚠️ Conflicts Detected\n\n' + conflictsList + '\n' : '';
 
-  return openOrReusePR({
-    repo,
-    baseBranch: 'main',
-    headBranch: branch,
-    title: 'Apply organization standard configuration',
-    body: [
-      '## Apply Organization Standard Configuration',
-      '',
-      'This PR applies standardized configuration from golden-path.',
-      '',
-      `**Repository:** \`${repo}\``,
-      `**Files copied:** ${filesCopied}`,
-      conflicts,
-      '> Automatically generated. Please review carefully.',
-    ]
-      .filter(Boolean)
-      .join('\n'),
-  });
+    return openOrReusePR({
+        repo,
+        baseBranch: 'main',
+        headBranch: branch,
+        title: 'Apply organization standard configuration',
+        body: [
+            '## Apply Organization Standard Configuration',
+            '',
+            'This PR applies standardized configuration from golden-path.',
+            '',
+            `**Repository:** \`${repo}\``,
+            `**Files copied:** ${filesCopied}`,
+            conflicts,
+            '> Automatically generated. Please review carefully.',
+        ]
+            .filter(Boolean)
+            .join('\n'),
+    });
 }

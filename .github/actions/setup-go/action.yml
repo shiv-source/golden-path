@@ -1,0 +1,33 @@
+name: 'Setup Go'
+description: 'Install Go from a version or a go.mod/go.work file.'
+
+inputs:
+    go-version:
+        description: 'Go version to install (ignored when go-version-file is set)'
+        required: false
+        default: 'stable'
+    go-version-file:
+        description: 'Path to a go.mod or go.work file that pins the Go version'
+        required: false
+        default: ''
+
+runs:
+    using: composite
+    steps:
+        - id: setup
+          shell: bash
+          run: |
+              if [ -n "${{ inputs.go-version-file }}" ]; then
+                echo "go-version=" >> "$GITHUB_OUTPUT"
+                echo "go-version-file=${{ inputs.go-version-file }}" >> "$GITHUB_OUTPUT"
+              else
+                echo "go-version=${{ inputs.go-version }}" >> "$GITHUB_OUTPUT"
+                echo "go-version-file=" >> "$GITHUB_OUTPUT"
+              fi
+
+        - name: Install Go
+          uses: actions/setup-go@v5
+          with:
+              go-version: ${{ steps.setup.outputs.go-version }}
+              go-version-file: ${{ steps.setup.outputs.go-version-file }}
+              cache-dependency-path: ${{ inputs.go-version-file }}

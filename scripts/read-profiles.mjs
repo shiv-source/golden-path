@@ -12,22 +12,22 @@ import { join, relative } from 'node:path';
  * @returns {Array<{ name: string, files: Array<{ path: string, content: string }> }>}
  */
 export function readProfiles({ profilesDir, names }) {
-  /** @type {Array<{ name: string, files: Array<{ path: string, content: string }> }>} */
-  const profiles = [];
+    /** @type {Array<{ name: string, files: Array<{ path: string, content: string }> }>} */
+    const profiles = [];
 
-  for (const name of names) {
-    const profilePath = join(profilesDir, name);
-    if (!existsSync(profilePath)) {
-      console.warn(`Profile directory not found: ${profilePath}`);
-      continue;
+    for (const name of names) {
+        const profilePath = join(profilesDir, name);
+        if (!existsSync(profilePath)) {
+            console.warn(`Profile directory not found: ${profilePath}`);
+            continue;
+        }
+
+        const files = [];
+        walkDir(profilePath, profilePath, files);
+        profiles.push({ name, files });
     }
 
-    const files = [];
-    walkDir(profilePath, profilePath, files);
-    profiles.push({ name, files });
-  }
-
-  return profiles;
+    return profiles;
 }
 
 /**
@@ -37,15 +37,15 @@ export function readProfiles({ profilesDir, names }) {
  * @param {Array<{ path: string, content: string }>} files - accumulator
  */
 function walkDir(dir, base, files) {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      walkDir(fullPath, base, files);
-    } else {
-      files.push({
-        path: relative(base, fullPath),
-        content: readFileSync(fullPath, 'utf-8'),
-      });
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const fullPath = join(dir, entry.name);
+        if (entry.isDirectory()) {
+            walkDir(fullPath, base, files);
+        } else {
+            files.push({
+                path: relative(base, fullPath),
+                content: readFileSync(fullPath, 'utf-8'),
+            });
+        }
     }
-  }
 }

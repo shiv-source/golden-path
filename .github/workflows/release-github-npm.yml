@@ -1,76 +1,76 @@
 name: 'Release (GitHub + npm)'
 
 on:
-  workflow_call:
-    inputs:
-      tag:
-        description: 'Tag to release (e.g., v1.0.0)'
-        type: string
-        required: true
-      npm-prerelease:
-        description: 'Publish prerelease tags to npm with --tag next'
-        type: boolean
-        default: false
-      npm-registry:
-        description: 'npm registry URL'
-        type: string
-        default: 'https://registry.npmjs.org'
-      npm-scope:
-        description: 'npm scope (e.g., @myorg)'
-        type: string
-        default: ''
-      node-version:
-        description: 'Node.js version'
-        type: string
-        default: '22'
-      generate-release-notes:
-        description: 'Auto-generate GitHub release notes'
-        type: boolean
-        default: true
-    secrets:
-      NPM_TOKEN:
-        description: 'npm registry auth token'
-        required: true
-    outputs:
-      tag_name:
-        description: 'Created tag name from GitHub release'
-        value: '${{ jobs.github-release.outputs.tag_name }}'
-      version:
-        description: 'Published semantic version'
-        value: '${{ jobs.github-release.outputs.version }}'
-      is_released:
-        description: 'Whether a GitHub release was created'
-        value: '${{ jobs.github-release.outputs.is_released }}'
-      is_prerelease:
-        description: 'Whether this is a prerelease'
-        value: '${{ jobs.github-release.outputs.is_prerelease }}'
-      release_type:
-        description: 'Release type: major, minor, patch, initial, rc, or tag'
-        value: '${{ jobs.github-release.outputs.release_type }}'
-      is_npm_published:
-        description: 'Whether the package was published to npm. False when skipped (dry-run, blocked prerelease, or npm-publish job did not run)'
-        value: '${{ jobs.npm-publish.outputs.release_created }}'
+    workflow_call:
+        inputs:
+            tag:
+                description: 'Tag to release (e.g., v1.0.0)'
+                type: string
+                required: true
+            npm-prerelease:
+                description: 'Publish prerelease tags to npm with --tag next'
+                type: boolean
+                default: false
+            npm-registry:
+                description: 'npm registry URL'
+                type: string
+                default: 'https://registry.npmjs.org'
+            npm-scope:
+                description: 'npm scope (e.g., @myorg)'
+                type: string
+                default: ''
+            node-version:
+                description: 'Node.js version'
+                type: string
+                default: '22'
+            generate-release-notes:
+                description: 'Auto-generate GitHub release notes'
+                type: boolean
+                default: true
+        secrets:
+            NPM_TOKEN:
+                description: 'npm registry auth token'
+                required: true
+        outputs:
+            tag_name:
+                description: 'Created tag name from GitHub release'
+                value: '${{ jobs.github-release.outputs.tag_name }}'
+            version:
+                description: 'Published semantic version'
+                value: '${{ jobs.github-release.outputs.version }}'
+            is_released:
+                description: 'Whether a GitHub release was created'
+                value: '${{ jobs.github-release.outputs.is_released }}'
+            is_prerelease:
+                description: 'Whether this is a prerelease'
+                value: '${{ jobs.github-release.outputs.is_prerelease }}'
+            release_type:
+                description: 'Release type: major, minor, patch, initial, rc, or tag'
+                value: '${{ jobs.github-release.outputs.release_type }}'
+            is_npm_published:
+                description: 'Whether the package was published to npm. False when skipped (dry-run, blocked prerelease, or npm-publish job did not run)'
+                value: '${{ jobs.npm-publish.outputs.release_created }}'
 
 jobs:
-  github-release:
-    name: GitHub Release
-    uses: ./.github/workflows/release-github.yml
-    with:
-      tag: '${{ inputs.tag }}'
-      generate-release-notes: ${{ inputs.generate-release-notes }}
+    github-release:
+        name: GitHub Release
+        uses: ./.github/workflows/release-github.yml
+        with:
+            tag: '${{ inputs.tag }}'
+            generate-release-notes: ${{ inputs.generate-release-notes }}
 
-  npm-publish:
-    name: npm Publish
-    needs: [github-release]
-    # actionlint can't resolve outputs from reusable workflows called via ./ path
-    # All outputs are defined in release-github.yml
-    if: needs.github-release.outputs.is_released == 'true' && (needs.github-release.outputs.is_prerelease != 'true' || inputs.npm-prerelease)
-    uses: ./.github/workflows/release-npm.yml
-    with:
-      version: '${{ needs.github-release.outputs.version }}'
-      node-version: '${{ inputs.node-version }}'
-      registry: '${{ inputs.npm-registry }}'
-      scope: '${{ inputs.npm-scope }}'
-      npm-tag: ${{ needs.github-release.outputs.is_prerelease == 'true' && 'next' || '' }}
-    secrets:
-      NPM_TOKEN: '${{ secrets.NPM_TOKEN }}'
+    npm-publish:
+        name: npm Publish
+        needs: [github-release]
+        # actionlint can't resolve outputs from reusable workflows called via ./ path
+        # All outputs are defined in release-github.yml
+        if: needs.github-release.outputs.is_released == 'true' && (needs.github-release.outputs.is_prerelease != 'true' || inputs.npm-prerelease)
+        uses: ./.github/workflows/release-npm.yml
+        with:
+            version: '${{ needs.github-release.outputs.version }}'
+            node-version: '${{ inputs.node-version }}'
+            registry: '${{ inputs.npm-registry }}'
+            scope: '${{ inputs.npm-scope }}'
+            npm-tag: ${{ needs.github-release.outputs.is_prerelease == 'true' && 'next' || '' }}
+        secrets:
+            NPM_TOKEN: '${{ secrets.NPM_TOKEN }}'
