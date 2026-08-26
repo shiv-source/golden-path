@@ -1,0 +1,4 @@
+# False positive: the "secret" is the pinned commit SHA for
+# aws-actions/configure-aws-credentials (public release metadata), not a
+# credential. See scripts/check-action-pins.mjs.
+05dc52f53b1820f5647820302aec77fbbfcc1ea3:scripts/check-action-pins.mjs:generic-api-key:32

@@ -29,7 +29,7 @@ export const CANONICAL_REFS = Object.freeze({
     'docker/build-push-action': '53b7df96c91f9c12dcc8a07bcb9ccacbed38856a', // v7.3.0
     'docker/metadata-action': 'dc802804100637a589fabce1cb79ff13a1411302', // v6.2.0
     'dependabot/fetch-metadata': '25dd0e34f4fe68f24cc83900b1fe3fe149efef98', // v3.1.0
-    'aws-actions/configure-aws-credentials': 'e6de054238d6b7531b4efff3b6587d9aade6a06c', // v6.2.3
+    'aws-actions/configure-aws-credentials': 'e6de054238d6b7531b4efff3b6587d9aade6a06c', // v6.2.3 gitleaks:allow generic-api-key (pinned commit SHA, not a credential)
     'renovatebot/github-action': '5402b206248e5a8c8427a15102702eb9c1793efc', // v46.2.4
 });
 
