@@ -40,7 +40,9 @@ runs:
           shell: bash
           run: |
               echo "bin-dir=$HOME/.local/bin" >> "$GITHUB_OUTPUT"
-              echo "tool-dir=$HOME/.local/bin/${{ inputs.repo }}/${{ inputs.version }}/${{ inputs.binary }}" >> "$GITHUB_OUTPUT"
+              # Binaries live under ~/.local/tools so the ~/.local/bin/<binary>
+              # symlink never collides with a repo-named subdirectory.
+              echo "tool-dir=$HOME/.local/tools/${{ inputs.repo }}/${{ inputs.version }}" >> "$GITHUB_OUTPUT"
 
         - id: cache
           name: Restore tool binary
