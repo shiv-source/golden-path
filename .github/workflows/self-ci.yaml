@@ -28,7 +28,7 @@ jobs:
         steps:
             # actions/checkout@v7.0.1
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-            - uses: shiv-source/golden-path/.github/actions/setup-node@main
+            - uses: ./.github/actions/setup-node
               with:
                   node-version: '22'
                   package-manager: pnpm
@@ -43,7 +43,7 @@ jobs:
         steps:
             # actions/checkout@v7.0.1
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-            - uses: shiv-source/golden-path/.github/actions/setup-node@main
+            - uses: ./.github/actions/setup-node
               with:
                   node-version: '22'
                   package-manager: pnpm
@@ -57,7 +57,7 @@ jobs:
         steps:
             # actions/checkout@v7.0.1
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-            - uses: shiv-source/golden-path/.github/actions/setup-node@main
+            - uses: ./.github/actions/setup-node
               with:
                   node-version: '22'
                   package-manager: pnpm
@@ -78,7 +78,7 @@ jobs:
         steps:
             # actions/checkout@v7.0.1
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-            - uses: shiv-source/golden-path/.github/actions/setup-node@main
+            - uses: ./.github/actions/setup-node
               with:
                   node-version: '22'
                   package-manager: pnpm
@@ -95,7 +95,7 @@ jobs:
         steps:
             # actions/checkout@v7.0.1
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-            - uses: shiv-source/golden-path/.github/actions/setup-node@main
+            - uses: ./.github/actions/setup-node
               with:
                   node-version: '22'
                   package-manager: pnpm
@@ -104,8 +104,20 @@ jobs:
     actionlint:
         name: Workflow Lint
         needs: [gate]
-        uses: ./.github/workflows/actionlint.yaml
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - uses: ./.github/actions/actionlint
     secret-scan:
         name: Secret Scan
         needs: [gate]
-        uses: ./.github/workflows/secret-scan-betterleaks.yaml
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+              with:
+                  fetch-depth: 0
+            - uses: ./.github/actions/betterleaks
