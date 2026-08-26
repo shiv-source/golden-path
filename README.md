@@ -22,6 +22,7 @@ Internal developer platform — standardized, reusable CI/CD workflows, automate
 | `issue-labels.yaml`            | Apply type/priority/area labels from issue form |
 | `pr-assignee.yaml`             | Auto-assign PR to its authors/committers        |
 | `self-ci.yaml`                 | Lint, test, format, secret-scan                 |
+| `self-pr-assignee.yaml`        | Golden-path's own PR auto-assignment            |
 
 ## Actions
 

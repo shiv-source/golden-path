@@ -1,0 +1,21 @@
+name: 'PR Assignee (self)'
+
+on:
+    pull_request:
+        branches: [main]
+
+permissions:
+    contents: read
+
+jobs:
+    gate:
+        if: github.repository == 'shiv-source/golden-path'
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - run: echo "Running on golden-path repo"
+
+    assign:
+        name: Assign PR authors
+        needs: [gate]
+        uses: ./.github/workflows/pr-assignee.yaml
