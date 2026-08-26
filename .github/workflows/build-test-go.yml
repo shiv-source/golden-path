@@ -80,7 +80,7 @@ jobs:
                   go-version: ${{ inputs.go-version }}
                   go-version-file: ${{ inputs.go-version-file }}
             - name: golangci-lint
-              uses: golangci/golangci-lint-action@v7
+              uses: golangci/golangci-lint-action@v9
               with:
                   working-directory: ${{ inputs.working-directory }}
 
