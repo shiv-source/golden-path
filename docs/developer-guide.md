@@ -202,6 +202,73 @@ only ever call the orchestrator.
 - `deploy-command` (optional — skip if empty)
 - **Secrets:** `REGISTRY_TOKEN` (required)
 
+**issue-labels.yaml:**
+
+- `config` (default: `config.json` — the action-bundled label set; pass a
+  repo-local path such as `.github/issue-labels.json` to use your own labels/form headings)
+
+### Issue Labeling
+
+`issue-labels.yaml` auto-applies the three-tier issue labels — **type**,
+**priority**, and **areas** — from the issue form answers a reporter selected.
+It is add-only (never removes labels) and whitelist-driven (a body can never
+inject a label outside the configured set). Trigger it from the `issues` event:
+
+```yaml
+# .github/workflows/issue-labels.yaml
+name: issue-labels
+on:
+    issues:
+        types: [opened, edited]
+
+permissions:
+    contents: read
+    issues: write
+
+jobs:
+    apply:
+        uses: your-org/golden-path/.github/workflows/issue-labels.yaml@v1
+```
+
+The default config (`config.json` inside the action) matches the reference
+three-tier scheme: `Change type` → type, `Priority` → priority, `Area(s)` →
+areas, plus a `Summary` + `Steps to reproduce` → `bug` fallback. To use another
+label set or form headings, copy that JSON into your repo and point `config`
+at it (labels must already exist on the repo — a missing label fails with a
+422).
+
+### PR Assignee
+
+`pr-assignee.yaml` auto-assigns every pull request to its author and all commit
+authors. It is add-only (never removes/replaces assignments, so manual
+assignees survive), skips excluded users (common bots by default), and only
+assigns users GitHub reports as assignable. It is convenience-only — it never
+fails the run. Trigger it from the `pull_request` event:
+
+```yaml
+# .github/workflows/pr-assignee.yaml
+name: pr-assignee
+on:
+    pull_request:
+        branches: [main]
+
+permissions:
+    contents: read
+    issues: write
+    pull-requests: write
+
+jobs:
+    assign:
+        uses: your-org/golden-path/.github/workflows/pr-assignee.yaml@v1
+```
+
+**pr-assignee.yaml inputs:**
+
+- `exclude-users` (default: `dependabot[bot],renovate[bot],github-actions[bot]` —
+  comma-separated logins to never auto-assign)
+- `filter-assignable` (boolean, default `true` — only assign users GitHub
+  reports as assignable, avoiding 422s on non-collaborator commit authors)
+
 ### Version Pinning
 
 By default, workflows are pinned to `@main` — always get the latest. For stability, pin to a tag:

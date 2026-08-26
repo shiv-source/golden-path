@@ -41,19 +41,19 @@ write YAML orchestration or version pins.
 
 Reference for the full set of composable workflows:
 
-| Workflow                                                               | Purpose                                                       |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `golden-path-ci.yaml`                                                  | Config-driven orchestrator (entry point)                      |
-| `build-test-go.yaml`                                                   | Single Go target: lint → test (coverage gate) → build         |
-| `build-test-node.yaml`                                                 | Single Node target: lint → typecheck → test (sharded) → build |
-| `security-scan.yaml`                                                   | Gitleaks + CodeQL                                             |
-| `secret-scan-betterleaks.yaml` / `secret-scan-ggshield.yaml`           | Secret scanning                                               |
-| `codespell.yaml`                                                       | Spell check                                                   |
-| `actionlint.yaml`                                                      | GitHub Actions workflow lint                                  |
-| `release-github.yaml` / `release-npm.yaml` / `release-github-npm.yaml` | Release automation                                            |
-| `deploy-service.yaml` / `deploy-s3.yaml`                               | Container / S3 deployment                                     |
-| `dependency-update.yaml`                                               | Dependabot auto-merge                                         |
-| `renovate.yaml` / `stale-issue.yaml`                                   | Dependency + issue hygiene                                    |
+| Workflow                                                                        | Purpose                                                       |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `golden-path-ci.yaml`                                                           | Config-driven orchestrator (entry point)                      |
+| `build-test-go.yaml`                                                            | Single Go target: lint → test (coverage gate) → build         |
+| `build-test-node.yaml`                                                          | Single Node target: lint → typecheck → test (sharded) → build |
+| `security-scan.yaml`                                                            | Gitleaks + CodeQL                                             |
+| `secret-scan-betterleaks.yaml` / `secret-scan-ggshield.yaml`                    | Secret scanning                                               |
+| `codespell.yaml`                                                                | Spell check                                                   |
+| `actionlint.yaml`                                                               | GitHub Actions workflow lint                                  |
+| `release-github.yaml` / `release-npm.yaml` / `release-github-npm.yaml`          | Release automation                                            |
+| `deploy-service.yaml` / `deploy-s3.yaml`                                        | Container / S3 deployment                                     |
+| `dependency-update.yaml`                                                        | Dependabot auto-merge                                         |
+| `renovate.yaml` / `stale-issue.yaml` / `issue-labels.yaml` / `pr-assignee.yaml` | Dependency + issue/PR hygiene                                 |
 
 The orchestrator fans out one `build-test-go` / `build-test-node` run **per
 configured target**, so a polyglot monorepo lists each package as a target.

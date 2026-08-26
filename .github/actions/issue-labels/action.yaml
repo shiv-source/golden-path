@@ -1,0 +1,28 @@
+name: 'Issue Labels'
+description: >-
+    Apply the three-tier issue labels (type, priority, areas) from issue-form
+    answers. Add-only — it never removes labels, so user-applied extras
+    survive. Parsing is whitelist-driven (see config.json): a body can never
+    inject a label that is not in the configured set.
+
+inputs:
+    token:
+        description: 'Token with issues: write permission. Defaults to the workflow token.'
+        required: false
+        default: '${{ github.token }}'
+    config:
+        description: >-
+            Path to the label-set + field-map JSON. Relative paths resolve
+            against this action's directory first (config.json by default),
+            then against the repo checkout, so you can point this at a
+            repo-local file to reuse the action with another label set.
+        required: false
+        default: 'config.json'
+
+outputs:
+    applied:
+        description: 'JSON array of the labels this run added ([] when nothing to add)'
+
+runs:
+    using: node20
+    main: dist/index.cjs

@@ -19,6 +19,8 @@ Internal developer platform — standardized, reusable CI/CD workflows, automate
 | `deploy-service.yaml`          | Docker build → push → deploy                    |
 | `dependency-update.yaml`       | Dependabot auto-merge                           |
 | `actionlint.yaml`              | Workflow linting                                |
+| `issue-labels.yaml`            | Apply type/priority/area labels from issue form |
+| `pr-assignee.yaml`             | Auto-assign PR to its authors/committers        |
 | `self-ci.yaml`                 | Lint, test, format, secret-scan                 |
 
 ## Actions
@@ -28,12 +30,14 @@ Internal developer platform — standardized, reusable CI/CD workflows, automate
 Referenced by the reusable workflows; cross-repo consumers fetch the action but
 never run `npm install`.
 
-| Action          | Purpose                                                      | Runtime deps      |
-| --------------- | ------------------------------------------------------------ | ----------------- |
-| `parse-config`  | Read `.github/golden-path.yaml` → validated, normalized JSON | `@actions/core`   |
-| `changed-files` | PR-aware change detection against glob patterns              | `@actions/github` |
-| `coverage-gate` | Run Go tests and enforce a coverage floor                    | `@actions/core`   |
-| `final-gate`    | Aggregate job results into one required check                | `@actions/core`   |
+| Action          | Purpose                                                               | Runtime deps      |
+| --------------- | --------------------------------------------------------------------- | ----------------- |
+| `parse-config`  | Read `.github/golden-path.yaml` → validated, normalized JSON          | `@actions/core`   |
+| `changed-files` | PR-aware change detection against glob patterns                       | `@actions/github` |
+| `coverage-gate` | Run Go tests and enforce a coverage floor                             | `@actions/core`   |
+| `final-gate`    | Aggregate job results into one required check                         | `@actions/core`   |
+| `issue-labels`  | Apply three-tier issue labels (type/priority/areas) from form answers | `@actions/core`   |
+| `pr-assignee`   | Auto-assign PR to its author and commit authors                       | `@actions/github` |
 
 ### Composite Actions (bash steps, `using: composite`)
 

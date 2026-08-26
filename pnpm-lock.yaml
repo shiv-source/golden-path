@@ -79,6 +79,12 @@ importers:
         specifier: workspace:*
         version: link:../../core
 
+  packages/actions/issue-labels:
+    dependencies:
+      '@actions/core':
+        specifier: 3.0.1
+        version: 3.0.1
+
   packages/actions/parse-config:
     dependencies:
       '@actions/core':
@@ -87,6 +93,15 @@ importers:
       '@golden-path/core':
         specifier: workspace:*
         version: link:../../core
+
+  packages/actions/pr-assignee:
+    dependencies:
+      '@actions/core':
+        specifier: 3.0.1
+        version: 3.0.1
+      '@actions/github':
+        specifier: 9.1.1
+        version: 9.1.1
 
   packages/core:
     dependencies:

@@ -1,0 +1,28 @@
+name: 'PR Assignee'
+description: >-
+    Auto-assign the pull request to its author and every commit author. Adds,
+    never replaces — manual assignments survive. Skips excluded users (bots by
+    default) and only assigns users GitHub reports as assignable. Convenience
+    only: it never fails the run.
+
+inputs:
+    token:
+        description: 'Token with issues: write permission. Defaults to the workflow token.'
+        required: false
+        default: '${{ github.token }}'
+    exclude-users:
+        description: 'Comma-separated GitHub logins to never auto-assign (bots by default).'
+        required: false
+        default: 'dependabot[bot],renovate[bot],github-actions[bot]'
+    filter-assignable:
+        description: 'Only assign users GitHub reports as assignable (true), avoiding 422s on non-collaborator commit authors.'
+        required: false
+        default: 'true'
+
+outputs:
+    assigned:
+        description: 'JSON array of the assignees added ([] when nothing to assign)'
+
+runs:
+    using: node20
+    main: dist/index.cjs

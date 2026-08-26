@@ -21,7 +21,9 @@ golden-path/
 │       ├── parse-config/          # @golden-path/action-parse-config
 │       ├── changed-files/         # @golden-path/action-changed-files
 │       ├── coverage-gate/         # @golden-path/action-coverage-gate
-│       └── final-gate/            # @golden-path/action-final-gate
+│       ├── final-gate/            # @golden-path/action-final-gate
+│       ├── issue-labels/          # @golden-path/action-issue-labels
+│       └── pr-assignee/           # @golden-path/action-pr-assignee
 ├── .github/
 │   ├── actions/                   # action.yaml manifests + committed dist/index.cjs bundles
 │   ├── workflows/                 # reusable + CI workflows
@@ -105,6 +107,8 @@ All reusable workflows live in `.github/workflows/`. Every script is consumed by
 | `actionlint.yaml`              | Reusable             | Workflow linting                                                       |
 | `repository-onboarding.yaml`   | Triggered            | Issue → validate → config → PR                                         |
 | `apply-repository-config.yaml` | Triggered            | Profile merge → PR into target repo                                    |
+| `issue-labels.yaml`            | Reusable             | Apply three-tier issue labels from issue-form answers                  |
+| `pr-assignee.yaml`             | Reusable             | Auto-assign PR to its author and commit authors                        |
 
 ### TypeScript Actions
 

@@ -1,0 +1,27 @@
+name: 'Issue Labels'
+
+on:
+    workflow_call:
+        inputs:
+            config:
+                description: >-
+                    Path to the label-set + field-map JSON. Defaults to the
+                    action-bundled config.json; point at a repo-local file
+                    (e.g. .github/issue-labels.json) to use another label set.
+                type: string
+                required: false
+                default: 'config.json'
+
+permissions:
+    contents: read
+    issues: write
+
+jobs:
+    apply:
+        name: Apply issue-form labels
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: shiv-source/golden-path/.github/actions/issue-labels@main
+              with:
+                  config: '${{ inputs.config }}'

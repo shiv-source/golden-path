@@ -1,0 +1,15 @@
+{
+    "name": "@golden-path/action-pr-assignee",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "description": "TypeScript action: auto-assign PR authors and committers to the pull request.",
+    "scripts": {
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@actions/core": "3.0.1",
+        "@actions/github": "9.1.1"
+    }
+}
