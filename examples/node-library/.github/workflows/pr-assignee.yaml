@@ -1,0 +1,23 @@
+name: pr-assignee
+# Auto-assign every PR to its author and all commit authors. Add-only: existing
+# assignments (including manual ones) are never replaced. Convenience only —
+# it never fails the run. Trigger on opened/synchronize/reopened so the set
+# stays current as commits are pushed.
+#
+# To override the default bot exclusions or disable the assignable-user filter:
+#
+#   with:
+#     exclude-users: 'dependabot[bot],github-actions[bot]'
+#     filter-assignable: false
+on:
+    pull_request:
+        branches: [main]
+
+permissions:
+    contents: read
+    issues: write
+    pull-requests: write
+
+jobs:
+    assign:
+        uses: shiv-source/golden-path/.github/workflows/pr-assignee.yaml@v1

@@ -12,13 +12,15 @@
         ▼               ▼                       ▼                  ▼
 ┌───────────────┐ ┌───────────────────┐ ┌──────────────────┐ ┌──────────────┐
 │ Reusable       │ │ TypeScript Actions│ │ Onboarding System│ │ Profiles (4) │
-│ Workflows (21) │ │ (6)               │ │ (13 .mjs scripts)│ │              │
+│ Workflows (23) │ │ (6)               │ │ (13 .mjs scripts)│ │              │
 │                │ │                   │ │                  │ │              │
 │ config-driven  │ │ parse-config      │ │ issue → parse →  │ │ common/      │
 │ orchestrator,  │ │ changed-files     │ │ validate → config│ │ node-library/│
 │ language CI,   │ │ coverage-gate     │ │ → PR → apply in  │ │ node-service/│
 │ scans, release,│ │ final-gate        │ │ target repo      │ │ go-service/  │
-│ deploy, renovate│ setup-go (composite)│ + repositories/*.yaml │              │
+│ deploy, renovate│ │ issue-labels     │ │ + repositories/*.yaml │              │
+│                │ │ pr-assignee      │ │                  │ │              │
+│                │ │ setup-go (composite)│                  │ │              │
 └───────┬───────┘ └─────────┬─────────┘ └─────────┬────────┘ └──────────────┘
         │                   │                     │
         └───────────────────┴─────────────────────┘
@@ -50,7 +52,7 @@ golden-path/
 │       └── final-gate/            #   .github/actions/final-gate
 ├── .github/
 │   ├── actions/                   # action.yaml manifests + committed dist/index.cjs bundles
-│   ├── workflows/                 # 21 reusable + triggered workflows
+│   ├── workflows/                 # 23 reusable + triggered workflows
 │   ├── ISSUE_TEMPLATE/            # repository-onboarding form
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── scripts/                       # onboarding + automation scripts (13 .mjs, zero deps)
@@ -82,6 +84,8 @@ triggered) and delegates business logic to the TypeScript actions and `.mjs` scr
 | `dependency-update.yaml`       | Dependabot auto-merge                                                                     |
 | `repository-onboarding.yaml`   | Issue → validate → generate config → PR                                                   |
 | `apply-repository-config.yaml` | Profile merge → PR into target repo                                                       |
+| `issue-labels.yaml`            | Apply three-tier issue labels from issue-form answers                                     |
+| `pr-assignee.yaml`             | Auto-assign PR to its author and commit authors                                           |
 | `self-ci.yaml`                 | Golden-path's own CI (lint, typecheck, test, format, dist check, actionlint, secret-scan) |
 
 The remaining workflows cover operational tooling: `actionlint`, `renovate`,
@@ -90,27 +94,29 @@ The remaining workflows cover operational tooling: `actionlint`, `renovate`,
 ## TypeScript Action Layer
 
 The actions under `.github/actions/` are the reusable building blocks referenced
-by the workflows. Four are real **JavaScript actions** written in TypeScript; the
+by the workflows. Six are real **JavaScript actions** written in TypeScript; the
 rest are composite actions that orchestrate upstream tooling.
 
-| Action                  | Type      | Purpose                                                         |
-| ----------------------- | --------- | --------------------------------------------------------------- |
-| `parse-config`          | JS (TS)   | Read `.github/golden-path.yaml` → validated, normalized outputs |
-| `changed-files`         | JS (TS)   | PR-aware change detection against globs                         |
-| `coverage-gate`         | JS (TS)   | Run Go tests, enforce a coverage floor                          |
-| `final-gate`            | JS (TS)   | Aggregate job results into one required check                   |
-| `setup-go`              | composite | Install Go from a version or go.mod/go.work (+ optional cache)  |
-| `setup-node`            | composite | Install Node + npm/pnpm/yarn with auto-detect, cache, install   |
-| `install-tool`          | composite | Download a pinned GitHub-release binary, cache it, add to PATH  |
-| `lint-go`               | composite | golangci-lint (pinned direct binary) + analysis cache           |
-| `codespell`             | composite | Spell check                                                     |
-| `actionlint`            | composite | GitHub Actions workflow linter                                  |
-| `betterleaks`           | composite | Secret scan over git history                                    |
-| `gitleaks`              | composite | Secret scan via gitleaks-action                                 |
-| `ggshield`              | composite | Secret scan via GitGuardian ggshield                            |
-| `docker-build-push`     | composite | Login → metadata → build & push a container image               |
-| `s3-deploy`             | composite | Configure AWS → s3 sync → CloudFront invalidation               |
-| `dependabot-auto-merge` | composite | Approve + auto-merge non-breaking Dependabot PRs                |
+| Action                  | Type      | Purpose                                                               |
+| ----------------------- | --------- | --------------------------------------------------------------------- |
+| `parse-config`          | JS (TS)   | Read `.github/golden-path.yaml` → validated, normalized outputs       |
+| `changed-files`         | JS (TS)   | PR-aware change detection against globs                               |
+| `coverage-gate`         | JS (TS)   | Run Go tests, enforce a coverage floor                                |
+| `final-gate`            | JS (TS)   | Aggregate job results into one required check                         |
+| `issue-labels`          | JS (TS)   | Apply three-tier issue labels (type/priority/areas) from form answers |
+| `pr-assignee`           | JS (TS)   | Auto-assign PR to its author and commit authors                       |
+| `setup-go`              | composite | Install Go from a version or go.mod/go.work (+ optional cache)        |
+| `setup-node`            | composite | Install Node + npm/pnpm/yarn with auto-detect, cache, install         |
+| `install-tool`          | composite | Download a pinned GitHub-release binary, cache it, add to PATH        |
+| `lint-go`               | composite | golangci-lint (pinned direct binary) + analysis cache                 |
+| `codespell`             | composite | Spell check                                                           |
+| `actionlint`            | composite | GitHub Actions workflow linter                                        |
+| `betterleaks`           | composite | Secret scan over git history                                          |
+| `gitleaks`              | composite | Secret scan via gitleaks-action                                       |
+| `ggshield`              | composite | Secret scan via GitGuardian ggshield                                  |
+| `docker-build-push`     | composite | Login → metadata → build & push a container image                     |
+| `s3-deploy`             | composite | Configure AWS → s3 sync → CloudFront invalidation                     |
+| `dependabot-auto-merge` | composite | Approve + auto-merge non-breaking Dependabot PRs                      |
 
 Each TypeScript action follows the same pattern for testability:
 

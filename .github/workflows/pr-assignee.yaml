@@ -1,0 +1,33 @@
+name: 'PR Assignee'
+
+on:
+    workflow_call:
+        inputs:
+            exclude-users:
+                description: >-
+                    Comma-separated GitHub logins to never auto-assign. Defaults
+                    to the common bots.
+                type: string
+                required: false
+                default: 'dependabot[bot],renovate[bot],github-actions[bot]'
+            filter-assignable:
+                description: 'Only assign users GitHub reports as assignable (true).'
+                type: boolean
+                required: false
+                default: true
+
+permissions:
+    contents: read
+    issues: write
+    pull-requests: write
+
+jobs:
+    assign:
+        name: Assign PR authors
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: shiv-source/golden-path/.github/actions/pr-assignee@main
+              with:
+                  exclude-users: '${{ inputs.exclude-users }}'
+                  filter-assignable: ${{ inputs.filter-assignable }}
