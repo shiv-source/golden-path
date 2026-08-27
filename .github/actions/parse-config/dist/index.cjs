@@ -37399,6 +37399,7 @@ var golden_path_schema_default = {
       additionalProperties: false,
       properties: {
         enabled: { type: "boolean", default: true },
+        setup_command: { type: "string", default: "" },
         language: {
           type: "string",
           enum: ["", "go", "node", "python", "java"],
@@ -37491,7 +37492,7 @@ var DEFAULTS = {
   version: 2,
   go: [],
   node: [],
-  security_scan: { enabled: true, language: "" },
+  security_scan: { enabled: true, setup_command: "", language: "" },
   secret_scan: { enabled: true, tool: "betterleaks" },
   codespell: { enabled: true },
   actionlint: { enabled: true }

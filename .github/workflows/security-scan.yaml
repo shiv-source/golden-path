@@ -14,13 +14,19 @@ on:
                 description: 'Path to custom Gitleaks config (defaults to built-in rules)'
                 type: string
                 default: ''
+            setup-command:
+                description: >-
+                    Command run after checkout and before CodeQL init (e.g. build
+                    assets the Go code embeds, so CodeQL's Go autobuild succeeds).
+                type: string
+                default: ''
             build-mode:
                 description: >-
-                    CodeQL build mode: none (default), autobuild, or manual. Use
-                    none for interpreted languages (go, node, python); use
-                    autobuild for compiled languages such as java or C/C++.
+                    CodeQL build mode: autobuild (default), manual, or none. Use
+                    autobuild for compiled languages (go, java, C/C++); none is
+                    only valid for interpreted languages (node, python).
                 type: string
-                default: 'none'
+                default: 'autobuild'
 
 permissions:
     contents: read
@@ -48,6 +54,10 @@ jobs:
         steps:
             # actions/checkout@v7.0.1
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - name: Setup
+              if: inputs.setup-command != ''
+              shell: bash
+              run: ${{ inputs.setup-command }}
             # github/codeql-action/init@codeql-bundle-v2.26.4
             # languages empty → CodeQL auto-detects; set the input to pin it.
             - uses: github/codeql-action/init@486fec2a3ea2626afcd8c7e9208b4f515078dd7e

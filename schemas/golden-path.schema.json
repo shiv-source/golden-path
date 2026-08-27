@@ -115,6 +115,7 @@
             "additionalProperties": false,
             "properties": {
                 "enabled": { "type": "boolean", "default": true },
+                "setup_command": { "type": "string", "default": "" },
                 "language": {
                     "type": "string",
                     "enum": ["", "go", "node", "python", "java"],

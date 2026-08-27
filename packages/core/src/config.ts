@@ -62,7 +62,7 @@ export const DEFAULTS: GoldenPathConfig = {
     version: 2,
     go: [],
     node: [],
-    security_scan: { enabled: true, language: '' },
+    security_scan: { enabled: true, setup_command: '', language: '' },
     secret_scan: { enabled: true, tool: 'betterleaks' },
     codespell: { enabled: true },
     actionlint: { enabled: true },

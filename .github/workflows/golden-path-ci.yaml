@@ -100,6 +100,7 @@ jobs:
             security-events: write
         uses: shiv-source/golden-path/.github/workflows/security-scan.yaml@main
         with:
+            setup-command: ${{ fromJSON(needs.config.outputs.config).security_scan.setup_command }}
             language: ${{ fromJSON(needs.config.outputs.config).security_scan.language }}
         secrets: inherit
 
