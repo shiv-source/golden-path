@@ -8,9 +8,12 @@ import { TOOLCHAIN } from './toolchain';
 // Language gates are opt-in: an empty go:/node: list disables the gate. Each
 // list entry is a target whose missing fields fall back to these defaults.
 export const GO_TARGET_DEFAULTS: GoTarget = {
+    name: '',
     go_version: 'stable',
     go_version_file: '',
     working_directory: '.',
+    setup_command: '',
+    test_args: '',
     change_detection: {
         enabled: true,
         paths: ['**/*.go', 'go.mod', 'go.sum', '.golangci.yaml', '.github/'],
@@ -27,10 +30,10 @@ export const GO_TARGET_DEFAULTS: GoTarget = {
         timeout: '5m',
         args: '',
     },
-    final_gate: true,
 };
 
 export const NODE_TARGET_DEFAULTS: NodeTarget = {
+    name: '',
     node_version: TOOLCHAIN.node,
     package_manager: 'auto',
     working_directory: '.',
@@ -39,14 +42,27 @@ export const NODE_TARGET_DEFAULTS: NodeTarget = {
     typecheck_command: 'npm run typecheck',
     test_command: 'npm test',
     build_command: 'npm run build',
-    final_gate: true,
+    change_detection: {
+        enabled: true,
+        paths: [
+            '**/*.{js,jsx,ts,tsx,mjs,cjs,json}',
+            'package.json',
+            'pnpm-lock.yaml',
+            'yarn.lock',
+            'package-lock.json',
+            '.github/',
+        ],
+    },
+    coverage_command: '',
+    coverage_floor: 0,
+    coverage_summary_path: 'coverage/coverage-summary.json',
 };
 
 export const DEFAULTS: GoldenPathConfig = {
     version: 2,
     go: [],
     node: [],
-    security_scan: { enabled: true, language: 'go' },
+    security_scan: { enabled: true, language: '' },
     secret_scan: { enabled: true, tool: 'betterleaks' },
     codespell: { enabled: true },
     actionlint: { enabled: true },

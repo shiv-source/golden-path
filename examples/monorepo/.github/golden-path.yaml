@@ -1,7 +1,8 @@
 version: 2
 
 go:
-    - working-directory: services/api
+    - name: api
+      working-directory: services/api
       go-version-file: services/api/go.mod
       change-detection:
           enabled: true
@@ -17,14 +18,16 @@ go:
           config: .golangci.yaml
           timeout: 5m
           args: ''
-    - working-directory: services/worker
+    - name: worker
+      working-directory: services/worker
       go-version-file: services/worker/go.mod
       coverage-floor: 60
       cross-compile:
           enabled: false
 
 node:
-    - working-directory: packages/web
+    - name: web
+      working-directory: packages/web
       package-manager: pnpm
       node-version: '22'
       shard-count: 3
@@ -32,7 +35,8 @@ node:
       typecheck-command: pnpm typecheck
       test-command: pnpm test
       build-command: pnpm build
-    - working-directory: packages/cli
+    - name: cli
+      working-directory: packages/cli
       node-version: '20'
       shard-count: 2
 

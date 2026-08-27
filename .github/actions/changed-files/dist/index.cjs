@@ -43331,20 +43331,42 @@ var golden_path_schema_default = {
       type: "object",
       additionalProperties: false,
       properties: {
+        name: { type: "string", default: "" },
         go_version: { type: "string", default: "stable" },
         go_version_file: { type: "string", default: "" },
         working_directory: { type: "string", default: "." },
+        setup_command: { type: "string", default: "" },
+        test_args: { type: "string", default: "" },
         change_detection: { $ref: "#/$defs/changeDetection" },
         coverage_floor: { type: "number", default: 0 },
         cross_compile: { $ref: "#/$defs/crossCompile" },
-        lint: { $ref: "#/$defs/lintConfig" },
-        final_gate: { type: "boolean", default: true }
+        lint: { $ref: "#/$defs/lintConfig" }
+      }
+    },
+    nodeChangeDetection: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean", default: true },
+        paths: {
+          type: "array",
+          items: { type: "string" },
+          default: [
+            "**/*.{js,jsx,ts,tsx,mjs,cjs,json}",
+            "package.json",
+            "pnpm-lock.yaml",
+            "yarn.lock",
+            "package-lock.json",
+            ".github/"
+          ]
+        }
       }
     },
     nodeTarget: {
       type: "object",
       additionalProperties: false,
       properties: {
+        name: { type: "string", default: "" },
         node_version: { type: "string", default: "22" },
         package_manager: { type: "string", enum: ["auto", "npm", "pnpm", "yarn"], default: "auto" },
         working_directory: { type: "string", default: "." },
@@ -43353,7 +43375,10 @@ var golden_path_schema_default = {
         typecheck_command: { type: "string", default: "npm run typecheck" },
         test_command: { type: "string", default: "npm test" },
         build_command: { type: "string", default: "npm run build" },
-        final_gate: { type: "boolean", default: true }
+        change_detection: { $ref: "#/$defs/nodeChangeDetection" },
+        coverage_command: { type: "string", default: "" },
+        coverage_floor: { type: "number", default: 0 },
+        coverage_summary_path: { type: "string", default: "coverage/coverage-summary.json" }
       }
     },
     scanConfig: {
@@ -43361,7 +43386,12 @@ var golden_path_schema_default = {
       additionalProperties: false,
       properties: {
         enabled: { type: "boolean", default: true },
-        language: { type: "string", enum: ["go", "node", "python", "java"], default: "go" }
+        language: {
+          type: "string",
+          enum: ["", "go", "node", "python", "java"],
+          default: "",
+          description: "CodeQL language (empty = auto-detect the repo's languages)"
+        }
       }
     },
     secretScanConfig: {
@@ -43396,9 +43426,12 @@ var TOOLCHAIN = {
 
 // packages/core/src/config.ts
 var GO_TARGET_DEFAULTS = {
+  name: "",
   go_version: "stable",
   go_version_file: "",
   working_directory: ".",
+  setup_command: "",
+  test_args: "",
   change_detection: {
     enabled: true,
     paths: ["**/*.go", "go.mod", "go.sum", ".golangci.yaml", ".github/"]
@@ -43414,10 +43447,10 @@ var GO_TARGET_DEFAULTS = {
     config: ".golangci.yaml",
     timeout: "5m",
     args: ""
-  },
-  final_gate: true
+  }
 };
 var NODE_TARGET_DEFAULTS = {
+  name: "",
   node_version: TOOLCHAIN.node,
   package_manager: "auto",
   working_directory: ".",
@@ -43426,7 +43459,20 @@ var NODE_TARGET_DEFAULTS = {
   typecheck_command: "npm run typecheck",
   test_command: "npm test",
   build_command: "npm run build",
-  final_gate: true
+  change_detection: {
+    enabled: true,
+    paths: [
+      "**/*.{js,jsx,ts,tsx,mjs,cjs,json}",
+      "package.json",
+      "pnpm-lock.yaml",
+      "yarn.lock",
+      "package-lock.json",
+      ".github/"
+    ]
+  },
+  coverage_command: "",
+  coverage_floor: 0,
+  coverage_summary_path: "coverage/coverage-summary.json"
 };
 var ajv = new import__.default({ allErrors: true, strict: true, useDefaults: false });
 var validate = ajv.compile(golden_path_schema_default);

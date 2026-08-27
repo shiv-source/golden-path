@@ -13468,7 +13468,7 @@ var require_fetch = __commonJS({
     function handleFetchDone(response) {
       finalizeAndReportTiming(response, "fetch");
     }
-    function fetch(input, init = void 0) {
+    function fetch2(input, init = void 0) {
       webidl.argumentLengthCheck(arguments, 1, "globalThis.fetch");
       let p = createDeferredPromise();
       let requestObject;
@@ -14425,7 +14425,7 @@ var require_fetch = __commonJS({
       }
     }
     module2.exports = {
-      fetch,
+      fetch: fetch2,
       Fetch,
       fetching,
       finalizeAndReportTiming
@@ -18774,7 +18774,7 @@ var require_undici = __commonJS({
     module2.exports.setGlobalDispatcher = setGlobalDispatcher;
     module2.exports.getGlobalDispatcher = getGlobalDispatcher;
     var fetchImpl = require_fetch().fetch;
-    module2.exports.fetch = async function fetch(init, options = void 0) {
+    module2.exports.fetch = async function fetch2(init, options = void 0) {
       try {
         return await fetchImpl(init, options);
       } catch (err) {
@@ -18822,6 +18822,9 @@ var require_undici = __commonJS({
     module2.exports.EventSource = EventSource;
   }
 });
+
+// packages/actions/final-gate/src/index.ts
+var import_promises = require("node:fs/promises");
 
 // node_modules/.pnpm/@actions+core@3.0.1/node_modules/@actions/core/lib/command.js
 var os = __toESM(require("os"), 1);
@@ -19327,27 +19330,142 @@ function summarize(results) {
 function formatFailureMessage(failures) {
   return failures.map((f) => `${f.job}(${f.result})`).join(" ");
 }
+function statusEmoji(result) {
+  switch (result) {
+    case "success":
+      return ":white_check_mark:";
+    case "failure":
+      return ":x:";
+    case "cancelled":
+      return ":stop_sign:";
+    default:
+      return ":heavy_minus_sign:";
+  }
+}
+var COMMENT_MARKER = "golden-path-quality-gate";
+function buildReport(results, coverageReport = {}) {
+  const lines = ["# Quality Gate", "", "| Check | Result |", "| --- | --- |"];
+  for (const { job, result } of results) {
+    lines.push(`| ${job} | ${statusEmoji(result)} ${result} |`);
+  }
+  if (coverageReport.coverage) {
+    const floor = coverageReport.coverageFloor ? ` (floor ${coverageReport.coverageFloor}%)` : "";
+    lines.push("", `**Coverage:** ${coverageReport.coverage}%${floor}`);
+  }
+  if (coverageReport.webCoverage) {
+    const floor = coverageReport.webCoverageFloor ? ` (floor ${coverageReport.webCoverageFloor}%)` : "";
+    lines.push("", `**Web coverage:** ${coverageReport.webCoverage}%${floor}`);
+  }
+  lines.push("", `<!-- ${COMMENT_MARKER} -->`);
+  return lines.join("\n");
+}
 
 // packages/actions/final-gate/src/index.ts
-function main() {
+function parseCoverage(value) {
+  if (!value) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+function checkCoverage(name, value, floor) {
+  const pct = parseCoverage(value);
+  if (pct === null) {
+    setFailed(`invalid ${name}: "${value}"`);
+    return false;
+  }
+  console.log(`${name}=${value}% floor=${floor}%`);
+  if (floor > 0 && pct < floor) {
+    setFailed(`${name} ${value}% is below floor ${floor}%`);
+    return false;
+  }
+  return true;
+}
+async function upsertComment(report) {
+  const token = process.env.GITHUB_TOKEN;
+  const repository = process.env.GITHUB_REPOSITORY;
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  if (!token || !repository || !eventPath) {
+    console.warn("skipping PR comment: missing GITHUB_TOKEN / GITHUB_REPOSITORY / GITHUB_EVENT_PATH");
+    return;
+  }
+  let number;
   try {
-    const resultsInput = getInput("results");
-    const coverage = getInput("coverage");
-    if (coverage) {
-      console.log(`coverage=${coverage}%`);
+    const event = JSON.parse(await (0, import_promises.readFile)(eventPath, "utf8"));
+    number = event.pull_request?.number ?? event.issue?.number;
+  } catch (error2) {
+    console.warn(
+      `skipping PR comment: could not read event payload (${error2 instanceof Error ? error2.message : String(error2)})`
+    );
+    return;
+  }
+  if (typeof number !== "number") {
+    console.warn("skipping PR comment: run is not on a pull request");
+    return;
+  }
+  const [owner, repo] = repository.split("/");
+  const base = `https://api.github.com/repos/${owner}/${repo}/issues/${number}/comments`;
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "Content-Type": "application/json"
+  };
+  try {
+    const listResponse = await fetch(`${base}?per_page=100`, { headers });
+    if (listResponse.ok) {
+      const comments = await listResponse.json();
+      const existing = comments.find((c) => c.body?.includes(COMMENT_MARKER));
+      if (existing) {
+        const updateResponse = await fetch(`${base}/${existing.id}`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ body: report })
+        });
+        if (!updateResponse.ok) {
+          console.warn(
+            `failed to update PR comment: ${updateResponse.status} ${await updateResponse.text()}`
+          );
+          return;
+        }
+        console.log("updated quality gate PR comment");
+        return;
+      }
     }
-    const { passed, failures } = summarize(parseResults(resultsInput));
+    const createResponse = await fetch(base, { method: "POST", headers, body: JSON.stringify({ body: report }) });
+    if (!createResponse.ok) {
+      console.warn(`failed to post PR comment: ${createResponse.status} ${await createResponse.text()}`);
+      return;
+    }
+    console.log("posted quality gate PR comment");
+  } catch (error2) {
+    console.warn(`failed to post PR comment: ${error2 instanceof Error ? error2.message : String(error2)}`);
+  }
+}
+async function main() {
+  try {
+    const results = parseResults(getInput("results"));
+    const coverage = getInput("coverage");
+    const coverageFloor = Number(getInput("coverage-floor") || "0") || 0;
+    const webCoverage = getInput("web-coverage");
+    const webCoverageFloor = Number(getInput("web-coverage-floor") || "0") || 0;
+    const { passed, failures } = summarize(results);
     setOutput("passed", passed ? "true" : "false");
+    let ok = true;
+    if (coverage && !checkCoverage("coverage", coverage, coverageFloor)) ok = false;
+    if (webCoverage && !checkCoverage("web-coverage", webCoverage, webCoverageFloor)) ok = false;
     if (!passed) {
       setFailed(`failed jobs: ${formatFailureMessage(failures)}`);
-    } else {
+      ok = false;
+    } else if (ok) {
       console.log("all checks passed");
+    }
+    if (getInput("pr-comment") === "true") {
+      await upsertComment(buildReport(results, { coverage, coverageFloor, webCoverage, webCoverageFloor }));
     }
   } catch (error2) {
     setFailed(error2 instanceof Error ? error2.message : String(error2));
   }
 }
-main();
+void main();
 /*! Bundled license information:
 
 undici/lib/web/fetch/body.js:

@@ -7,6 +7,10 @@ on:
                 description: 'Path to the golden-path config file'
                 type: string
                 default: '.github/golden-path.yaml'
+            pr-comment:
+                description: 'Post/update a PR status comment with the gate report (requires issues: write)'
+                type: boolean
+                default: false
 
 permissions:
     contents: read
@@ -34,9 +38,11 @@ jobs:
 
     # One Go/Node gate per configured target (each target has its own working
     # directory and overrides). Presence in the config list enables the gate.
+    # The target `name` (falling back to working-directory) labels the job.
     go:
         needs: [config]
         if: needs.config.outputs.go != '[]'
+        name: Go (${{ matrix.target.name || matrix.target.working_directory }})
         strategy:
             fail-fast: false
             matrix:
@@ -46,6 +52,8 @@ jobs:
             working-directory: ${{ matrix.target.working_directory }}
             go-version: ${{ matrix.target.go_version }}
             go-version-file: ${{ matrix.target.go_version_file }}
+            setup-command: ${{ matrix.target.setup_command }}
+            test-args: ${{ matrix.target.test_args }}
             coverage-floor: ${{ matrix.target.coverage_floor }}
             cross-compile: ${{ matrix.target.cross_compile.enabled }}
             goos: ${{ toJSON(matrix.target.cross_compile.goos) }}
@@ -56,11 +64,14 @@ jobs:
             golangci-lint-config: ${{ matrix.target.lint.config }}
             golangci-lint-timeout: ${{ matrix.target.lint.timeout }}
             golangci-lint-args: ${{ matrix.target.lint.args }}
-            final-gate: ${{ matrix.target.final_gate }}
+            # The orchestrator's own final-gate is the single aggregate; the
+            # leaf Go gates never emit their own.
+            final-gate: false
 
     node:
         needs: [config]
         if: needs.config.outputs.node != '[]'
+        name: Node (${{ matrix.target.name || matrix.target.working_directory }})
         strategy:
             fail-fast: false
             matrix:
@@ -75,6 +86,11 @@ jobs:
             typecheck-command: ${{ matrix.target.typecheck_command }}
             test-command: ${{ matrix.target.test_command }}
             build-command: ${{ matrix.target.build_command }}
+            change-detection: ${{ matrix.target.change_detection.enabled }}
+            change-paths: ${{ toJSON(matrix.target.change_detection.paths) }}
+            coverage-command: ${{ matrix.target.coverage_command }}
+            coverage-floor: ${{ matrix.target.coverage_floor }}
+            coverage-summary-path: ${{ matrix.target.coverage_summary_path }}
 
     security:
         needs: [config]
@@ -89,8 +105,14 @@ jobs:
 
     secret-scan:
         needs: [config]
-        if: needs.config.outputs.secret_scan_enabled == 'true'
+        if: ${{ needs.config.outputs.secret_scan_enabled == 'true' && fromJSON(needs.config.outputs.config).secret_scan.tool == 'betterleaks' }}
         uses: shiv-source/golden-path/.github/workflows/secret-scan-betterleaks.yaml@main
+        secrets: inherit
+
+    secret-scan-ggshield:
+        needs: [config]
+        if: ${{ needs.config.outputs.secret_scan_enabled == 'true' && fromJSON(needs.config.outputs.config).secret_scan.tool == 'ggshield' }}
+        uses: shiv-source/golden-path/.github/workflows/secret-scan-ggshield.yaml@main
         secrets: inherit
 
     codespell:
@@ -104,12 +126,17 @@ jobs:
         uses: shiv-source/golden-path/.github/workflows/actionlint.yaml@main
 
     final-gate:
-        needs: [config, go, node, security, secret-scan, codespell, actionlint]
+        needs: [config, go, node, security, secret-scan, secret-scan-ggshield, codespell, actionlint]
         if: ${{ always() }}
         runs-on: ubuntu-latest
         timeout-minutes: 5
+        permissions:
+            contents: read
+            issues: write
+            pull-requests: write
         steps:
             - name: Aggregate results
               uses: shiv-source/golden-path/.github/actions/final-gate@main
               with:
-                  results: ${{ format('go={0} node={1} security={2} secret-scan={3} codespell={4} actionlint={5}', needs.go.result, needs.node.result, needs.security.result, needs.secret-scan.result, needs.codespell.result, needs.actionlint.result) }}
+                  results: ${{ format('go={0} node={1} security={2} secret-scan={3} secret-scan-ggshield={4} codespell={5} actionlint={6}', needs.go.result, needs.node.result, needs.security.result, needs.secret-scan.result, needs.secret-scan-ggshield.result, needs.codespell.result, needs.actionlint.result) }}
+                  pr-comment: ${{ inputs.pr-comment }}

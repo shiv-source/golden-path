@@ -15,6 +15,18 @@ on:
                 description: 'Working directory for the Go module'
                 type: string
                 default: '.'
+            setup-command:
+                description: >-
+                    Command run after Go setup and before tests/build (e.g. build
+                    embedded assets the Go code embeds).
+                type: string
+                default: ''
+            test-args:
+                description: >-
+                    Arguments passed to go test. Defaults to
+                    '-race -coverprofile=coverage.out ./...'
+                type: string
+                default: ''
             coverage-floor:
                 description: 'Minimum required total coverage percentage (0 disables the gate)'
                 type: number
@@ -64,6 +76,9 @@ on:
             coverage:
                 description: 'Total test coverage percentage'
                 value: ${{ jobs.test.outputs.coverage }}
+            coverage_floor:
+                description: 'Configured coverage floor percentage'
+                value: ${{ jobs.test.outputs.coverage_floor }}
 
 permissions:
     contents: read
@@ -113,6 +128,7 @@ jobs:
         timeout-minutes: 15
         outputs:
             coverage: ${{ steps.coverage.outputs.coverage }}
+            coverage_floor: ${{ inputs.coverage-floor }}
         steps:
             # actions/checkout@v7.0.1
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -121,12 +137,18 @@ jobs:
                   go-version: ${{ inputs.go-version }}
                   go-version-file: ${{ inputs.go-version-file }}
                   working-directory: ${{ inputs.working-directory }}
+            - name: Setup
+              if: inputs.setup-command != ''
+              shell: bash
+              working-directory: ${{ inputs.working-directory }}
+              run: ${{ inputs.setup-command }}
             - name: Test with coverage gate
               id: coverage
               uses: shiv-source/golden-path/.github/actions/coverage-gate@main
               with:
                   working-directory: ${{ inputs.working-directory }}
                   floor: ${{ inputs.coverage-floor }}
+                  test-args: ${{ inputs.test-args }}
 
     build:
         needs: [changes]
@@ -146,6 +168,11 @@ jobs:
                   go-version: ${{ inputs.go-version }}
                   go-version-file: ${{ inputs.go-version-file }}
                   working-directory: ${{ inputs.working-directory }}
+            - name: Setup
+              if: inputs.setup-command != ''
+              shell: bash
+              working-directory: ${{ inputs.working-directory }}
+              run: ${{ inputs.setup-command }}
             - name: Build (${{ matrix.goos }}/${{ matrix.goarch }})
               run: GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build ./...
               working-directory: ${{ inputs.working-directory }}

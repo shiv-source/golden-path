@@ -35,11 +35,58 @@ on:
                 description: 'Build command'
                 type: string
                 default: 'npm run build'
+            change-detection:
+                description: 'Skip Node.js gates when no matching files changed on a pull request'
+                type: boolean
+                default: false
+            change-paths:
+                description: 'JSON array of glob patterns used for change detection'
+                type: string
+                default: '["**/*.{js,jsx,ts,tsx,mjs,cjs,json}", "package.json", "pnpm-lock.yaml", "yarn.lock", "package-lock.json", ".github/"]'
+            coverage-command:
+                description: >-
+                    Command that runs tests with coverage and writes an istanbul
+                    json-summary (e.g. 'npm run test:coverage'). Empty disables
+                    the coverage job.
+                type: string
+                default: ''
+            coverage-floor:
+                description: 'Minimum required total coverage percentage (0 disables the gate)'
+                type: number
+                default: 0
+            coverage-summary-path:
+                description: 'Path to the istanbul json-summary file, relative to working-directory'
+                type: string
+                default: 'coverage/coverage-summary.json'
+
+        outputs:
+            coverage:
+                description: 'Total test coverage percentage (empty when the coverage job is disabled)'
+                value: ${{ jobs.coverage.outputs.coverage }}
+            coverage_floor:
+                description: 'Configured coverage floor percentage'
+                value: ${{ jobs.coverage.outputs.coverage_floor }}
 
 permissions:
     contents: read
 
 jobs:
+    changes:
+        if: inputs.change-detection
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        outputs:
+            node: ${{ steps.changed.outputs.changed }}
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+              with:
+                  fetch-depth: 0
+            - id: changed
+              uses: shiv-source/golden-path/.github/actions/changed-files@main
+              with:
+                  paths: ${{ inputs.change-paths }}
+
     setup:
         name: Setup Shards
         runs-on: ubuntu-latest
@@ -55,6 +102,8 @@ jobs:
 
     lint:
         name: Lint
+        needs: [changes]
+        if: ${{ !inputs.change-detection || needs.changes.outputs.node == 'true' }}
         runs-on: ubuntu-latest
         timeout-minutes: 15
         steps:
@@ -71,6 +120,8 @@ jobs:
 
     typecheck:
         name: Type Check
+        needs: [changes]
+        if: ${{ !inputs.change-detection || needs.changes.outputs.node == 'true' }}
         runs-on: ubuntu-latest
         timeout-minutes: 15
         steps:
@@ -87,7 +138,8 @@ jobs:
 
     test:
         name: Test (shard ${{ matrix.shard }})
-        needs: [setup]
+        needs: [changes, setup]
+        if: ${{ !inputs.change-detection || needs.changes.outputs.node == 'true' }}
         runs-on: ubuntu-latest
         timeout-minutes: 15
         strategy:
@@ -106,9 +158,41 @@ jobs:
               run: ${{ inputs.test-command }} -- --test-shard=${{ matrix.shard }}/${{ inputs.shard-count }}
               working-directory: ${{ inputs.working-directory }}
 
+    coverage:
+        name: Coverage Gate
+        needs: [changes]
+        if: ${{ (!inputs.change-detection || needs.changes.outputs.node == 'true') && inputs.coverage-command != '' && inputs.coverage-floor > 0 }}
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        outputs:
+            coverage: ${{ steps.coverage.outputs.coverage }}
+            coverage_floor: ${{ inputs.coverage-floor }}
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+            - uses: shiv-source/golden-path/.github/actions/setup-node@main
+              with:
+                  node-version: ${{ inputs.node-version }}
+                  package-manager: ${{ inputs.package-manager }}
+                  working-directory: ${{ inputs.working-directory }}
+            - name: Run coverage
+              run: ${{ inputs.coverage-command }}
+              working-directory: ${{ inputs.working-directory }}
+            - name: Coverage gate (>= coverage-floor%)
+              id: coverage
+              shell: bash
+              working-directory: ${{ inputs.working-directory }}
+              run: |
+                  pct=$(node -e "const s = require('./${{ inputs.coverage-summary-path }}').total; const v = s.lines || s.statements; process.stdout.write(String(v.pct));")
+                  floor="${{ inputs.coverage-floor }}"
+                  echo "coverage=$pct" >> "$GITHUB_OUTPUT"
+                  echo "coverage=$pct% floor=$floor%"
+                  awk -v t="$pct" -v f="$floor" 'BEGIN { exit !(t >= f) }'
+
     build:
         name: Build
-        needs: [lint, typecheck, test]
+        needs: [changes, lint, typecheck, test]
+        if: ${{ !inputs.change-detection || needs.changes.outputs.node == 'true' }}
         runs-on: ubuntu-latest
         timeout-minutes: 15
         steps:

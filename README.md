@@ -19,8 +19,10 @@ Internal developer platform — standardized, reusable CI/CD workflows, automate
 | `deploy-service.yaml`          | Docker build → push → deploy                    |
 | `dependency-update.yaml`       | Dependabot auto-merge                           |
 | `actionlint.yaml`              | Workflow linting                                |
-| `issue-labels.yaml`            | Apply type/priority/area labels from issue form |
+| `governance.yaml`              | Repo-hygiene automations bundle (see below)     |
 | `pr-assignee.yaml`             | Auto-assign PR to its authors/committers        |
+| `issue-labels.yaml`            | Apply type/priority/area labels from issue form |
+| `stale-issue.yaml`             | Mark/close stale issues and PRs                 |
 | `self-ci.yaml`                 | Lint, test, format, secret-scan                 |
 | `self-pr-assignee.yaml`        | Golden-path's own PR auto-assignment            |
 
@@ -118,10 +120,11 @@ jobs:
 version: 2
 
 # Go and Node are OPT-IN target lists: presence in the list enables the gate.
-# Each target has its own working-directory and overrides (add more for a
-# monorepo). Omit the list entirely to disable the gate.
+# Each target has its own name (used in the CI job list and reports), working
+# directory and overrides (add more for a monorepo). Omit the list to disable.
 go:
-    - go-version-file: go.mod # or go-version: 'stable'
+    - name: api # identify the target; fallback is the working-directory
+      go-version-file: go.mod # or go-version: 'stable'
       working-directory: .
       change-detection:
           enabled: true
@@ -136,9 +139,10 @@ go:
           config: .golangci.yaml
           timeout: 5m
           args: ''
-      final-gate: true
-
-security-scan: { enabled: true, language: go }
+# Scans/linters run automatically and are on by default (opt out with
+# enabled: false). security-scan's CodeQL auto-detects languages unless you
+# pin one (language: go).
+security-scan: { enabled: true }
 secret-scan: { enabled: true, tool: betterleaks }
 codespell: { enabled: true }
 actionlint: { enabled: true }
@@ -148,6 +152,39 @@ The config file drives which checks run and their settings. The orchestrator
 fans out one Go/Node gate **per configured target** plus the scans and
 linters. Set `enabled: false` to skip a scan; a missing config file enables no
 language gates.
+
+### Governance automations (recommended, second file)
+
+CI gates run on `push`/`pull_request`; repo-hygiene automations need `issues`
+and `schedule` too, so they live in a separate event-driven workflow. The
+`governance.yaml` bundle (PR auto-assign, issue-form labels, stale management,
+Dependabot auto-merge) is default-all-on and needs only its own trigger file:
+
+```yaml
+# .github/workflows/governance.yml
+name: governance
+on:
+    pull_request:
+        branches: [main, master]
+    issues:
+        types: [opened, edited]
+    schedule:
+        - cron: '0 6 * * *'
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    governance:
+        uses: shiv-source/golden-path/.github/workflows/governance.yaml@main
+        # disable any automation with inputs, e.g. with: dependency-update: false
+```
+
+The bundled actions no-op gracefully on events they don't apply to, so one
+workflow can carry every trigger. The standard consumer layout is therefore
+two files: `ci.yaml` (→ `golden-path-ci.yaml`) for quality gates and
+`governance.yml` (→ `governance.yaml`) for automations.
 
 ### Direct workflow calls
 
