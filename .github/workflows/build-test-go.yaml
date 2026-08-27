@@ -113,6 +113,11 @@ jobs:
                   go-version: ${{ inputs.go-version }}
                   go-version-file: ${{ inputs.go-version-file }}
                   working-directory: ${{ inputs.working-directory }}
+            - name: Setup
+              if: inputs.setup-command != ''
+              shell: bash
+              working-directory: ${{ inputs.working-directory }}
+              run: ${{ inputs.setup-command }}
             - uses: shiv-source/golden-path/.github/actions/lint-go@main
               with:
                   working-directory: ${{ inputs.working-directory }}

@@ -43386,6 +43386,7 @@ var golden_path_schema_default = {
       additionalProperties: false,
       properties: {
         enabled: { type: "boolean", default: true },
+        setup_command: { type: "string", default: "" },
         language: {
           type: "string",
           enum: ["", "go", "node", "python", "java"],

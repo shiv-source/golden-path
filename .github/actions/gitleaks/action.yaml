@@ -20,3 +20,6 @@ runs:
           with:
               config-path: ${{ inputs.config }}
               args: ${{ inputs.args }}
+          env:
+              # Required since gitleaks-action v3 to scan pull requests.
+              GITHUB_TOKEN: ${{ github.token }}

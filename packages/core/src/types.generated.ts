@@ -67,6 +67,7 @@ export interface NodeChangeDetection {
 }
 export interface ScanConfig {
     enabled?: boolean;
+    setup_command?: string;
     /**
      * CodeQL language (empty = auto-detect the repo's languages)
      */
