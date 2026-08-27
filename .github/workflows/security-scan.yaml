@@ -4,9 +4,12 @@ on:
     workflow_call:
         inputs:
             language:
-                description: 'Programming language for CodeQL (node, go, python, java)'
+                description: >-
+                    Programming language for CodeQL (node, go, python, java).
+                    Empty (default) lets CodeQL auto-detect the repo's languages.
                 type: string
-                required: true
+                required: false
+                default: ''
             gitleaks-config:
                 description: 'Path to custom Gitleaks config (defaults to built-in rules)'
                 type: string
@@ -38,6 +41,7 @@ jobs:
             # actions/checkout@v7.0.1
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
             # github/codeql-action/init@codeql-bundle-v2.26.4
+            # languages empty → CodeQL auto-detects; set the input to pin it.
             - uses: github/codeql-action/init@486fec2a3ea2626afcd8c7e9208b4f515078dd7e
               with:
                   languages: '${{ inputs.language }}'

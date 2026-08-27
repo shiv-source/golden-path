@@ -57,7 +57,10 @@ export interface NodeTarget {
 }
 export interface ScanConfig {
     enabled?: boolean;
-    language?: 'go' | 'node' | 'python' | 'java';
+    /**
+     * CodeQL language (empty = auto-detect the repo's languages)
+     */
+    language?: '' | 'go' | 'node' | 'python' | 'java';
 }
 export interface SecretScanConfig {
     enabled?: boolean;

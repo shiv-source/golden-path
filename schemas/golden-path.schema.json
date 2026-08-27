@@ -90,7 +90,12 @@
             "additionalProperties": false,
             "properties": {
                 "enabled": { "type": "boolean", "default": true },
-                "language": { "type": "string", "enum": ["go", "node", "python", "java"], "default": "go" }
+                "language": {
+                    "type": "string",
+                    "enum": ["", "go", "node", "python", "java"],
+                    "default": "",
+                    "description": "CodeQL language (empty = auto-detect the repo's languages)"
+                }
             }
         },
         "secretScanConfig": {

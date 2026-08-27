@@ -138,7 +138,10 @@ go:
           args: ''
       final-gate: true
 
-security-scan: { enabled: true, language: go }
+# Scans/linters run automatically and are on by default (opt out with
+# enabled: false). security-scan's CodeQL auto-detects languages unless you
+# pin one (language: go).
+security-scan: { enabled: true }
 secret-scan: { enabled: true, tool: betterleaks }
 codespell: { enabled: true }
 actionlint: { enabled: true }

@@ -104,7 +104,7 @@ go:
 #       test-command: npm test
 #       build-command: npm run build
 
-security-scan: { enabled: true, language: go }
+security-scan: { enabled: true }
 secret-scan: { enabled: true, tool: betterleaks }
 codespell: { enabled: true }
 actionlint: { enabled: true }
@@ -182,7 +182,8 @@ only ever call the orchestrator.
 
 **security-scan.yaml:**
 
-- `language` (required: `node`, `go`, `python`, `java`)
+- `language` (default: `''` — CodeQL auto-detects; pin with `node`, `go`,
+  `python`, or `java` if needed)
 - `gitleaks-config` (default: built-in rules)
 
 **release-npm.yaml:**
