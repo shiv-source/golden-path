@@ -1,14 +1,30 @@
 name: 'Final Gate'
-description: 'Aggregate upstream job results into a single required check that fails on any failure/cancelled job.'
+description: 'Aggregate upstream job results into a single required check that fails on any failure/cancelled job, with optional coverage gates and a PR status comment.'
 
 inputs:
     results:
         description: 'Space-separated "job=result" pairs (e.g. "lint=success test=failure build=skipped")'
         required: true
     coverage:
-        description: 'Reported coverage percentage (optional)'
+        description: 'Reported primary coverage percentage (optional)'
         required: false
         default: ''
+    coverage-floor:
+        description: 'Minimum required percentage for the coverage input (0 disables the gate)'
+        required: false
+        default: '0'
+    web-coverage:
+        description: 'Reported secondary coverage percentage, e.g. frontend (optional)'
+        required: false
+        default: ''
+    web-coverage-floor:
+        description: 'Minimum required percentage for web-coverage (0 disables the gate)'
+        required: false
+        default: '0'
+    pr-comment:
+        description: 'Post or update a PR status comment with the gate report (true/false). Requires issues: write on pull requests.'
+        required: false
+        default: 'false'
 
 outputs:
     passed:
