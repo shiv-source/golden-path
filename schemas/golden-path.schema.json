@@ -21,7 +21,7 @@
         },
         "security_scan": { "$ref": "#/$defs/scanConfig" },
         "secret_scan": { "$ref": "#/$defs/secretScanConfig" },
-        "codespell": { "$ref": "#/$defs/flagConfig" },
+        "codespell": { "$ref": "#/$defs/codespellConfig" },
         "actionlint": { "$ref": "#/$defs/flagConfig" }
     },
     "$defs": {
@@ -130,6 +130,28 @@
             "properties": {
                 "enabled": { "type": "boolean", "default": true },
                 "tool": { "type": "string", "enum": ["betterleaks", "ggshield"], "default": "betterleaks" }
+            }
+        },
+        "codespellConfig": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "enabled": { "type": "boolean", "default": true },
+                "skip": {
+                    "type": "string",
+                    "default": ".git,node_modules,dist,build,vendor,package-lock.json,pnpm-lock.yaml,*.lock,*.sum",
+                    "description": "Comma-separated glob patterns of paths for codespell to skip (vendor dirs, lockfiles, generated bundles)"
+                },
+                "ignore_words_file": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to a codespell ignore-words file (one word per line) for intentional/technical terms"
+                },
+                "args": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Extra arguments passed to codespell"
+                }
             }
         },
         "flagConfig": {

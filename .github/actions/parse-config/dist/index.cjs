@@ -37305,7 +37305,7 @@ var golden_path_schema_default = {
     },
     security_scan: { $ref: "#/$defs/scanConfig" },
     secret_scan: { $ref: "#/$defs/secretScanConfig" },
-    codespell: { $ref: "#/$defs/flagConfig" },
+    codespell: { $ref: "#/$defs/codespellConfig" },
     actionlint: { $ref: "#/$defs/flagConfig" }
   },
   $defs: {
@@ -37416,6 +37416,28 @@ var golden_path_schema_default = {
         tool: { type: "string", enum: ["betterleaks", "ggshield"], default: "betterleaks" }
       }
     },
+    codespellConfig: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean", default: true },
+        skip: {
+          type: "string",
+          default: ".git,node_modules,dist,build,vendor,package-lock.json,pnpm-lock.yaml,*.lock,*.sum",
+          description: "Comma-separated glob patterns of paths for codespell to skip (vendor dirs, lockfiles, generated bundles)"
+        },
+        ignore_words_file: {
+          type: "string",
+          default: "",
+          description: "Path to a codespell ignore-words file (one word per line) for intentional/technical terms"
+        },
+        args: {
+          type: "string",
+          default: "",
+          description: "Extra arguments passed to codespell"
+        }
+      }
+    },
     flagConfig: {
       type: "object",
       additionalProperties: false,
@@ -37494,7 +37516,12 @@ var DEFAULTS = {
   node: [],
   security_scan: { enabled: true, setup_command: "", language: "" },
   secret_scan: { enabled: true, tool: "betterleaks" },
-  codespell: { enabled: true },
+  codespell: {
+    enabled: true,
+    skip: ".git,node_modules,dist,build,vendor,package-lock.json,pnpm-lock.yaml,*.lock,*.sum",
+    ignore_words_file: "",
+    args: ""
+  },
   actionlint: { enabled: true }
 };
 function parseYaml(text) {

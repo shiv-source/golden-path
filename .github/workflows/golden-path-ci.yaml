@@ -120,6 +120,10 @@ jobs:
         needs: [config]
         if: needs.config.outputs.codespell_enabled == 'true'
         uses: shiv-source/golden-path/.github/workflows/codespell.yaml@main
+        with:
+            skip: ${{ fromJSON(needs.config.outputs.config).codespell.skip }}
+            ignore-words-file: ${{ fromJSON(needs.config.outputs.config).codespell.ignore_words_file }}
+            args: ${{ fromJSON(needs.config.outputs.config).codespell.args }}
 
     actionlint:
         needs: [config]

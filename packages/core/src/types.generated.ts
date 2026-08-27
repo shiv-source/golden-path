@@ -16,7 +16,7 @@ export interface GoldenPathConfig {
     node?: NodeTarget[];
     security_scan?: ScanConfig;
     secret_scan?: SecretScanConfig;
-    codespell?: FlagConfig;
+    codespell?: CodespellConfig;
     actionlint?: FlagConfig;
 }
 export interface GoTarget {
@@ -76,6 +76,21 @@ export interface ScanConfig {
 export interface SecretScanConfig {
     enabled?: boolean;
     tool?: 'betterleaks' | 'ggshield';
+}
+export interface CodespellConfig {
+    enabled?: boolean;
+    /**
+     * Comma-separated glob patterns of paths for codespell to skip (vendor dirs, lockfiles, generated bundles)
+     */
+    skip?: string;
+    /**
+     * Path to a codespell ignore-words file (one word per line) for intentional/technical terms
+     */
+    ignore_words_file?: string;
+    /**
+     * Extra arguments passed to codespell
+     */
+    args?: string;
 }
 export interface FlagConfig {
     enabled?: boolean;
