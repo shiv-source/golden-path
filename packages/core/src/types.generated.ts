@@ -20,14 +20,16 @@ export interface GoldenPathConfig {
     actionlint?: FlagConfig;
 }
 export interface GoTarget {
+    name?: string;
     go_version?: string;
     go_version_file?: string;
     working_directory?: string;
+    setup_command?: string;
+    test_args?: string;
     change_detection?: ChangeDetection;
     coverage_floor?: number;
     cross_compile?: CrossCompile;
     lint?: LintConfig;
-    final_gate?: boolean;
 }
 export interface ChangeDetection {
     enabled?: boolean;
@@ -45,6 +47,7 @@ export interface LintConfig {
     args?: string;
 }
 export interface NodeTarget {
+    name?: string;
     node_version?: string;
     package_manager?: 'auto' | 'npm' | 'pnpm' | 'yarn';
     working_directory?: string;
@@ -53,7 +56,14 @@ export interface NodeTarget {
     typecheck_command?: string;
     test_command?: string;
     build_command?: string;
-    final_gate?: boolean;
+    change_detection?: NodeChangeDetection;
+    coverage_command?: string;
+    coverage_floor?: number;
+    coverage_summary_path?: string;
+}
+export interface NodeChangeDetection {
+    enabled?: boolean;
+    paths?: string[];
 }
 export interface ScanConfig {
     enabled?: boolean;

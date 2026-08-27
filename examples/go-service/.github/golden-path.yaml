@@ -1,7 +1,8 @@
 version: 2
 
 go:
-    - working-directory: .
+    - name: service
+      working-directory: .
       go-version-file: go.mod
       change-detection:
           enabled: true
@@ -21,7 +22,6 @@ go:
           config: .golangci.yaml
           timeout: 5m
           args: ''
-      final-gate: true
 
 security-scan:
     enabled: true

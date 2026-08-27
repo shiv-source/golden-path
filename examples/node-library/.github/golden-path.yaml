@@ -1,7 +1,8 @@
 version: 2
 
 node:
-    - working-directory: .
+    - name: library
+      working-directory: .
       node-version: '22'
       package-manager: auto
       shard-count: 3
@@ -9,7 +10,6 @@ node:
       typecheck-command: npm run typecheck
       test-command: npm test
       build-command: npm run build
-      final-gate: true
 
 security-scan:
     enabled: true

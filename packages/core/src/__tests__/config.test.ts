@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     DEFAULTS,
     GO_TARGET_DEFAULTS,
+    NODE_TARGET_DEFAULTS,
     deepMerge,
     keysToSnake,
     normalizeConfig,
@@ -123,6 +124,58 @@ describe('normalizeConfig', () => {
         expect(GO_TARGET_DEFAULTS.lint.golangci_lint_version).toBe(TOOLCHAIN.golangciLint);
         expect(GO_TARGET_DEFAULTS.working_directory).toBe('.');
     });
+
+    it('defaults go setup-command/test-args and node coverage/change-detection', () => {
+        const config = normalizeConfig({});
+        expect(GO_TARGET_DEFAULTS.setup_command).toBe('');
+        expect(GO_TARGET_DEFAULTS.test_args).toBe('');
+        expect(NODE_TARGET_DEFAULTS.coverage_command).toBe('');
+        expect(NODE_TARGET_DEFAULTS.coverage_floor).toBe(0);
+        expect(NODE_TARGET_DEFAULTS.coverage_summary_path).toBe('coverage/coverage-summary.json');
+        expect(NODE_TARGET_DEFAULTS.change_detection.enabled).toBe(true);
+        expect(config.node).toEqual([]);
+    });
+
+    it('normalizes a dual go+node monorepo target set (thoth-like)', () => {
+        const config = normalizeConfig({
+            go: [
+                {
+                    'working-directory': '.',
+                    'go-version-file': 'go.mod',
+                    'setup-command': 'make web',
+                    'test-args': '-race ./agent/...',
+                    'coverage-floor': 90,
+                },
+            ],
+            node: [
+                {
+                    'working-directory': '.',
+                    'coverage-command': 'pnpm run test:coverage',
+                    'coverage-floor': 90,
+                    'coverage-summary-path': 'web/coverage/coverage-summary.json',
+                },
+                { 'working-directory': '.', 'test-command': 'pnpm --filter ext test' },
+            ],
+        });
+        expect(config.go[0]?.setup_command).toBe('make web');
+        expect(config.go[0]?.test_args).toBe('-race ./agent/...');
+        expect(config.go[0]?.name).toBe('');
+        expect(config.node[0]?.coverage_command).toBe('pnpm run test:coverage');
+        expect(config.node[0]?.coverage_summary_path).toBe('web/coverage/coverage-summary.json');
+        expect(config.node[0]?.change_detection?.paths).toContain('package.json');
+        expect(config.node[1]?.test_command).toBe('pnpm --filter ext test');
+        expect(config.node[1]?.coverage_command).toBe('');
+    });
+
+    it('preserves target names', () => {
+        const config = normalizeConfig({
+            go: [{ name: 'backend' }],
+            node: [{ name: 'web' }],
+        });
+        expect(config.go[0]?.name).toBe('backend');
+        expect(config.node[0]?.name).toBe('web');
+        expect(GO_TARGET_DEFAULTS.name).toBe('');
+    });
 });
 
 describe('validateConfig', () => {
@@ -147,5 +200,20 @@ describe('validateConfig', () => {
     it('rejects invalid enum values inside a target', () => {
         const { errors } = validateConfig({ node: [{ package_manager: 'bower' }] });
         expect(errors.length).toBeGreaterThan(0);
+    });
+
+    it('accepts setup-command/test-args and node coverage keys', () => {
+        const { errors } = validateConfig({
+            go: [{ 'setup-command': 'make web', 'test-args': '-race ./...' }],
+            node: [
+                {
+                    'coverage-command': 'npm run test:coverage',
+                    'coverage-floor': 90,
+                    'coverage-summary-path': 'coverage/coverage-summary.json',
+                    'change-detection': { enabled: true, paths: ['web/**'] },
+                },
+            ],
+        });
+        expect(errors).toEqual([]);
     });
 });

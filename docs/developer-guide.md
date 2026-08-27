@@ -62,7 +62,7 @@ permissions:
 
 jobs:
     golden-path:
-        uses: your-org/golden-path/.github/workflows/golden-path-ci.yaml@v1
+        uses: shiv-source/golden-path/.github/workflows/golden-path-ci.yaml@v1
         with:
             config-path: .github/golden-path.yaml
         secrets: inherit
@@ -73,10 +73,11 @@ jobs:
 version: 2
 
 # Go and Node are OPT-IN target lists: presence in the list enables the gate.
-# Each target has its own working-directory and overrides (add more for a
-# monorepo). Omit the list entirely to disable the gate.
+# Each target has a `name` (used in the CI job list) plus its own working
+# directory and overrides (add more for a monorepo). Omit a list to disable it.
 go:
-    - go-version-file: go.mod # or go-version: 'stable'
+    - name: api
+      go-version-file: go.mod # or go-version: 'stable'
       working-directory: .
       change-detection:
           enabled: true
@@ -91,21 +92,28 @@ go:
           config: .golangci.yaml
           timeout: 5m
           args: ''
-      final-gate: true
 
-# Node.js targets:
-# node:
-#     - working-directory: .
-#       node-version: '22'
-#       package-manager: auto # auto | npm | pnpm | yarn
-#       shard-count: 3
-#       lint-command: npm run lint
-#       typecheck-command: npm run typecheck
-#       test-command: npm test
-#       build-command: npm run build
+# Node.js targets — same pattern, per-target commands, coverage, and
+# change-detection:
+node:
+    - name: web
+      node-version: '22'
+      package-manager: auto # auto | npm | pnpm | yarn
+      working-directory: .
+      shard-count: 3
+      lint-command: npm run lint
+      typecheck-command: npm run typecheck
+      test-command: npm test
+      build-command: npm run build
+      coverage-command: npm run test:coverage # empty disables the coverage gate
+      coverage-floor: 90
+      coverage-summary-path: coverage/coverage-summary.json
+      change-detection:
+          enabled: true
+          paths: ['web/**', 'package.json', 'pnpm-lock.yaml', '.github/']
 
 security-scan: { enabled: true }
-secret-scan: { enabled: true, tool: betterleaks }
+secret-scan: { enabled: true, tool: betterleaks } # tool: betterleaks | ggshield
 codespell: { enabled: true }
 actionlint: { enabled: true }
 ```
@@ -113,7 +121,10 @@ actionlint: { enabled: true }
 The orchestrator reads the config, then runs one Go/Node gate **per configured
 target** plus the security scan, secret scan, codespell, and actionlint. Set
 `enabled: false` to skip a scan/linter; a missing config file enables no
-language gates (a single-language repo adds one target).
+language gates (a single-language repo adds one target). `secret-scan.tool`
+selects Betterleaks (default, no secrets) or GitGuardian `ggshield` (requires
+a `GITGUARDIAN_API_KEY` secret). The orchestrator's `final-gate` is the single
+aggregate check — per-target gates never emit their own.
 
 > **Validation:** the config is validated against a strict JSON Schema
 > (`schemas/golden-path.schema.json`). Unknown keys and invalid values fail the
@@ -135,11 +146,11 @@ on:
 
 jobs:
     build-test:
-        uses: your-org/golden-path/.github/workflows/build-test-node.yaml@main
+        uses: shiv-source/golden-path/.github/workflows/build-test-node.yaml@main
         secrets: inherit
 
     security:
-        uses: your-org/golden-path/.github/workflows/security-scan.yaml@main
+        uses: shiv-source/golden-path/.github/workflows/security-scan.yaml@main
         with:
             language: node
         secrets: inherit
@@ -162,12 +173,19 @@ only ever call the orchestrator.
 - `typecheck-command` (default: `npm run typecheck`)
 - `test-command` (default: `npm test`)
 - `build-command` (default: `npm run build`)
+- `change-detection` (boolean, default `false` — skip when no matching files changed)
+- `change-paths` (JSON array of globs)
+- `coverage-command` (default: `''` — e.g. `npm run test:coverage`; empty disables)
+- `coverage-floor` (number, default `0`)
+- `coverage-summary-path` (default: `coverage/coverage-summary.json`)
 
 **build-test-go.yaml:**
 
 - `go-version` (default: `stable`)
 - `go-version-file` (default: `''` — pins Go from `go.mod`/`go.work`)
 - `working-directory` (default: `.`)
+- `setup-command` (default: `''` — run after Go setup, before tests/build)
+- `test-args` (default: `''` — extra `go test` args, defaults to `-race -coverprofile=coverage.out ./...`)
 - `coverage-floor` (number, default `0` — minimum coverage %, `0` disables)
 - `cross-compile` (boolean, default `false`)
 - `goos` (JSON array, default `["linux","darwin","windows"]`)
@@ -228,7 +246,7 @@ permissions:
 
 jobs:
     apply:
-        uses: your-org/golden-path/.github/workflows/issue-labels.yaml@v1
+        uses: shiv-source/golden-path/.github/workflows/issue-labels.yaml@v1
 ```
 
 The default config (`config.json` inside the action) matches the reference
@@ -260,7 +278,7 @@ permissions:
 
 jobs:
     assign:
-        uses: your-org/golden-path/.github/workflows/pr-assignee.yaml@v1
+        uses: shiv-source/golden-path/.github/workflows/pr-assignee.yaml@v1
 ```
 
 **pr-assignee.yaml inputs:**
@@ -275,5 +293,5 @@ jobs:
 By default, workflows are pinned to `@main` — always get the latest. For stability, pin to a tag:
 
 ```yaml
-uses: your-org/golden-path/.github/workflows/build-test-node.yaml@v1
+uses: shiv-source/golden-path/.github/workflows/build-test-node.yaml@v1
 ```
