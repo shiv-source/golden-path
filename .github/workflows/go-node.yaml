@@ -1,0 +1,184 @@
+name: 'Build & Test (Go + Node.js)'
+
+on:
+    workflow_call:
+        inputs:
+            # --- Gate toggles -------------------------------------------------
+            go:
+                description: 'Enable the Go build/lint/test gate'
+                type: boolean
+                default: true
+            node:
+                description: 'Enable the Node.js build/lint/typecheck/test gate'
+                type: boolean
+                default: true
+            final-gate:
+                description: >-
+                    Emit a single aggregated required check. Disable when this
+                    workflow is composed into an orchestrator (e.g. quality)
+                    that owns the aggregate.
+                type: boolean
+                default: true
+
+            # --- Go gate ------------------------------------------------------
+            go-version:
+                description: 'Go version (ignored when go-version-file is set)'
+                type: string
+                default: 'stable'
+            go-version-file:
+                description: 'Path to go.mod or go.work that pins the Go version'
+                type: string
+                default: ''
+            working-directory:
+                description: 'Working directory for the Go and Node.js projects'
+                type: string
+                default: '.'
+            setup-command:
+                description: >-
+                    Command run after Go setup and before tests/build (e.g. build
+                    embedded assets the Go code embeds).
+                type: string
+                default: ''
+            test-args:
+                description: >-
+                    Arguments passed to go test. Defaults to
+                    '-race -coverprofile=coverage.out ./...'
+                type: string
+                default: ''
+            coverage-floor:
+                description: 'Minimum required total Go coverage percentage (0 disables the gate)'
+                type: number
+                default: 0
+            cross-compile:
+                description: 'Cross-compile the Go module for multiple GOOS/GOARCH combinations'
+                type: boolean
+                default: false
+            goos:
+                description: 'JSON array of GOOS targets to build when cross-compile is enabled'
+                type: string
+                default: '["linux","darwin","windows"]'
+            goarch:
+                description: 'JSON array of GOARCH targets to build when cross-compile is enabled'
+                type: string
+                default: '["amd64","arm64"]'
+            change-detection:
+                description: 'Skip Go gates when no matching files changed on a pull request'
+                type: boolean
+                default: false
+            change-paths:
+                description: 'JSON array of glob patterns used for Go change detection'
+                type: string
+                default: '["**/*.go","go.mod","go.sum",".golangci.yaml",".github/"]'
+            golangci-lint-version:
+                description: 'golangci-lint release tag'
+                type: string
+                default: 'v2.13.1'
+            golangci-lint-config:
+                description: 'Path to the golangci-lint config file'
+                type: string
+                default: '.golangci.yaml'
+            golangci-lint-timeout:
+                description: 'golangci-lint run timeout'
+                type: string
+                default: '5m'
+            golangci-lint-args:
+                description: 'Extra golangci-lint arguments'
+                type: string
+                default: ''
+
+            # --- Node.js gate -------------------------------------------------
+            node-version:
+                description: 'Node.js version'
+                type: string
+                default: '22'
+            package-manager:
+                description: 'Package manager: auto (detect), npm, pnpm, or yarn'
+                type: string
+                default: 'auto'
+            shard-count:
+                description: 'Number of Node.js test shards for parallel execution'
+                type: number
+                default: 3
+            lint-command:
+                description: 'Node.js lint command'
+                type: string
+                default: 'npm run lint'
+            typecheck-command:
+                description: 'Node.js type check command'
+                type: string
+                default: 'npm run typecheck'
+            test-command:
+                description: 'Node.js test command'
+                type: string
+                default: 'npm test'
+            build-command:
+                description: 'Node.js build command'
+                type: string
+                default: 'npm run build'
+
+        outputs:
+            coverage:
+                description: 'Go test coverage percentage (empty when the go gate is disabled)'
+                value: ${{ jobs.go.outputs.coverage }}
+            coverage_floor:
+                description: 'Configured Go coverage floor percentage'
+                value: ${{ jobs.go.outputs.coverage_floor }}
+            passed:
+                description: 'true when every enabled gate passed'
+                value: ${{ jobs.final-gate.outputs.passed }}
+
+permissions:
+    contents: read
+
+jobs:
+    go:
+        if: inputs.go
+        uses: shiv-source/golden-path/.github/workflows/build-test-go.yaml@main
+        with:
+            go-version: ${{ inputs.go-version }}
+            go-version-file: ${{ inputs.go-version-file }}
+            working-directory: ${{ inputs.working-directory }}
+            setup-command: ${{ inputs.setup-command }}
+            test-args: ${{ inputs.test-args }}
+            coverage-floor: ${{ inputs.coverage-floor }}
+            cross-compile: ${{ inputs.cross-compile }}
+            goos: ${{ inputs.goos }}
+            goarch: ${{ inputs.goarch }}
+            change-detection: ${{ inputs.change-detection }}
+            change-paths: ${{ inputs.change-paths }}
+            golangci-lint-version: ${{ inputs.golangci-lint-version }}
+            golangci-lint-config: ${{ inputs.golangci-lint-config }}
+            golangci-lint-timeout: ${{ inputs.golangci-lint-timeout }}
+            golangci-lint-args: ${{ inputs.golangci-lint-args }}
+            final-gate: false
+
+    node:
+        if: inputs.node
+        uses: shiv-source/golden-path/.github/workflows/build-test-node.yaml@main
+        with:
+            node-version: ${{ inputs.node-version }}
+            package-manager: ${{ inputs.package-manager }}
+            working-directory: ${{ inputs.working-directory }}
+            shard-count: ${{ inputs.shard-count }}
+            lint-command: ${{ inputs.lint-command }}
+            typecheck-command: ${{ inputs.typecheck-command }}
+            test-command: ${{ inputs.test-command }}
+            build-command: ${{ inputs.build-command }}
+
+    final-gate:
+        # The two child workflows run without their own final-gates, so this
+        # job is the single aggregate — unless composed into an orchestrator
+        # (quality) that disables it and owns the gate.
+        if: ${{ always() && inputs.final-gate }}
+        needs: [go, node]
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        outputs:
+            passed: ${{ steps.gate.outputs.passed }}
+        steps:
+            - name: Aggregate results
+              id: gate
+              uses: shiv-source/golden-path/.github/actions/final-gate@main
+              with:
+                  results: ${{ format('go={0} node={1}', needs.go.result, needs.node.result) }}
+                  coverage: ${{ needs.go.outputs.coverage }}

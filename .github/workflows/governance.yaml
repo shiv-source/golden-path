@@ -1,0 +1,133 @@
+name: 'Governance'
+
+on:
+    workflow_call:
+        inputs:
+            # --- Automation toggles -------------------------------------------
+            pr-assignee:
+                description: 'Auto-assign pull request authors to their PRs'
+                type: boolean
+                default: true
+            issue-labels:
+                description: 'Apply labels from issue forms'
+                type: boolean
+                default: true
+            stale:
+                description: 'Mark and close stale issues and pull requests'
+                type: boolean
+                default: true
+            dependency-update:
+                description: 'Auto-merge non-breaking Dependabot updates'
+                type: boolean
+                default: true
+
+            # --- PR assignee ---------------------------------------------------
+            exclude-users:
+                description: >-
+                    Comma-separated GitHub logins to never auto-assign. Defaults
+                    to the common bots.
+                type: string
+                default: 'dependabot[bot],renovate[bot],github-actions[bot]'
+            filter-assignable:
+                description: 'Only assign users GitHub reports as assignable (true).'
+                type: boolean
+                default: true
+
+            # --- Issue labels -------------------------------------------------
+            issue-labels-config:
+                description: >-
+                    Path to the label-set + field-map JSON. Defaults to the
+                    action-bundled config.json; point at a repo-local file
+                    (e.g. .github/issue-labels.json) to use another label set.
+                type: string
+                default: 'config.json'
+
+            # --- Stale --------------------------------------------------------
+            days-before-stale:
+                description: 'Days of inactivity before marking stale'
+                type: number
+                default: 60
+            days-before-close:
+                description: 'Days after stale marking before closing'
+                type: number
+                default: 14
+            stale-issue-label:
+                description: 'Label applied to stale issues'
+                type: string
+                default: 'stale'
+            stale-pr-label:
+                description: 'Label applied to stale PRs'
+                type: string
+                default: 'stale'
+            exempt-issue-labels:
+                description: 'Comma-separated labels preventing issues from being marked stale'
+                type: string
+                default: ''
+            exempt-pr-labels:
+                description: 'Comma-separated labels preventing PRs from being marked stale'
+                type: string
+                default: ''
+            operations-per-run:
+                description: 'Max operations per run for API rate-limit safety'
+                type: number
+                default: 30
+
+            # --- Dependency update --------------------------------------------
+            package-ecosystem:
+                description: 'Package ecosystem (npm, go, pip, maven)'
+                type: string
+                default: 'npm'
+            auto-merge:
+                description: 'Auto-merge non-breaking dependency updates'
+                type: boolean
+                default: true
+
+permissions:
+    contents: read
+
+jobs:
+    pr-assignee:
+        if: inputs.pr-assignee
+        permissions:
+            contents: read
+            issues: write
+            pull-requests: write
+        uses: shiv-source/golden-path/.github/workflows/pr-assignee.yaml@main
+        with:
+            exclude-users: ${{ inputs.exclude-users }}
+            filter-assignable: ${{ inputs.filter-assignable }}
+
+    issue-labels:
+        if: inputs.issue-labels
+        permissions:
+            contents: read
+            issues: write
+        uses: shiv-source/golden-path/.github/workflows/issue-labels.yaml@main
+        with:
+            config: ${{ inputs.issue-labels-config }}
+
+    stale:
+        if: inputs.stale
+        permissions:
+            contents: read
+            issues: write
+            pull-requests: write
+        uses: shiv-source/golden-path/.github/workflows/stale-issue.yaml@main
+        with:
+            days-before-stale: ${{ inputs.days-before-stale }}
+            days-before-close: ${{ inputs.days-before-close }}
+            stale-issue-label: ${{ inputs.stale-issue-label }}
+            stale-pr-label: ${{ inputs.stale-pr-label }}
+            exempt-issue-labels: ${{ inputs.exempt-issue-labels }}
+            exempt-pr-labels: ${{ inputs.exempt-pr-labels }}
+            operations-per-run: ${{ inputs.operations-per-run }}
+
+    dependency-update:
+        if: inputs.dependency-update
+        permissions:
+            contents: write
+            pull-requests: write
+        uses: shiv-source/golden-path/.github/workflows/dependency-update.yaml@main
+        with:
+            package-ecosystem: ${{ inputs.package-ecosystem }}
+            auto-merge: ${{ inputs.auto-merge }}
