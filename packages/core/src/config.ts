@@ -39,6 +39,19 @@ export const NODE_TARGET_DEFAULTS: NodeTarget = {
     typecheck_command: 'npm run typecheck',
     test_command: 'npm test',
     build_command: 'npm run build',
+    coverage_command: '',
+    coverage_floor: 0,
+    change_detection: {
+        enabled: true,
+        paths: [
+            '**/*.{ts,tsx,js,jsx,mjs,cjs}',
+            'package.json',
+            'pnpm-lock.yaml',
+            'yarn.lock',
+            'package-lock.json',
+            '.github/',
+        ],
+    },
     final_gate: true,
 };
 

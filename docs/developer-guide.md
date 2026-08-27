@@ -157,11 +157,19 @@ only ever call the orchestrator.
 - `node-version` (default: `22`)
 - `package-manager` (default: `auto` — `auto | npm | pnpm | yarn`)
 - `working-directory` (default: `.`)
-- `shard-count` (default: `3`)
+- `shard-count` (default: `3` — set `1` to run tests once without the shard flag)
 - `lint-command` (default: `npm run lint`)
 - `typecheck-command` (default: `npm run typecheck`)
 - `test-command` (default: `npm test`)
 - `build-command` (default: `npm run build`)
+- `coverage-command` (default: `''` — e.g. `pnpm test:coverage`; when set it
+  replaces the sharded test run and enforces `coverage-floor`)
+- `coverage-floor` (number, default `0` — minimum statements coverage %, `0`
+  disables)
+- `change-detection` (boolean, default `false` — skip the Node gates when no
+  matching files changed on a PR)
+- `change-paths` (JSON array of globs, default
+  `["**/*.{ts,tsx,js,jsx,mjs,cjs}","package.json","pnpm-lock.yaml","yarn.lock","package-lock.json",".github/"]`)
 
 **build-test-go.yaml:**
 
@@ -268,6 +276,37 @@ jobs:
   comma-separated logins to never auto-assign)
 - `filter-assignable` (boolean, default `true` — only assign users GitHub
   reports as assignable, avoiding 422s on non-collaborator commit authors)
+
+### Final Gate Report
+
+The `final-gate` action aggregates upstream job results into a single required
+check and renders a **rich report**: a per-job table, plus coverage rows for the
+backend (`coverage`, `coverage-floor`) and frontend (`web-coverage`,
+`web-coverage-floor`) when provided. On `pull_request` runs it can also **upsert
+a marker-tagged PR comment** (`pr-comment: true`) that updates in place instead
+of stacking new comments. The gate fails unless every listed job succeeded or
+was skipped; report/comment failures never change the gate.
+
+```yaml
+final-gate:
+    needs: [go, web]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+        contents: read
+        issues: write
+        pull-requests: write
+    steps:
+        - uses: your-org/golden-path/.github/actions/final-gate@v1
+          with:
+              results: ${{ format('go={0} web={1}', needs.go.result, needs.web.result) }}
+              coverage: ${{ needs.go.outputs.coverage }}
+              coverage-floor: ${{ needs.go.outputs.coverage_floor }}
+              web-coverage: ${{ needs.web.outputs.coverage }}
+              web-coverage-floor: ${{ needs.web.outputs.coverage_floor }}
+              pr-comment: true
+```
 
 ### Version Pinning
 

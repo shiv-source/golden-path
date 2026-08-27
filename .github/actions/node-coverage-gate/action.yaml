@@ -1,0 +1,31 @@
+name: 'Node Coverage Gate'
+description: 'Run a Node coverage command and enforce a coverage floor from vitest coverage-summary.json.'
+
+inputs:
+    working-directory:
+        description: 'Working directory containing the Node.js project'
+        required: false
+        default: '.'
+    coverage-command:
+        description: 'Command that runs the test suite with coverage (e.g. pnpm test:coverage)'
+        required: true
+    floor:
+        description: 'Minimum required statements coverage percentage (0 disables the gate)'
+        required: false
+        default: '0'
+    coverage-summary-path:
+        description: 'Path to vitest coverage-summary.json, relative to the working directory'
+        required: false
+        default: 'coverage/coverage-summary.json'
+
+outputs:
+    coverage:
+        description: 'Total statements coverage percentage'
+    coverage_covered:
+        description: 'Covered statements'
+    coverage_total:
+        description: 'Total statements'
+
+runs:
+    using: node20
+    main: dist/index.cjs

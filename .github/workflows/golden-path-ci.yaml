@@ -75,6 +75,10 @@ jobs:
             typecheck-command: ${{ matrix.target.typecheck_command }}
             test-command: ${{ matrix.target.test_command }}
             build-command: ${{ matrix.target.build_command }}
+            coverage-command: ${{ matrix.target.coverage_command }}
+            coverage-floor: ${{ matrix.target.coverage_floor }}
+            change-detection: ${{ matrix.target.change_detection.enabled }}
+            change-paths: ${{ toJSON(matrix.target.change_detection.paths) }}
 
     security:
         needs: [config]
@@ -108,8 +112,15 @@ jobs:
         if: ${{ always() }}
         runs-on: ubuntu-latest
         timeout-minutes: 5
+        permissions:
+            contents: read
+            issues: write
+            pull-requests: write
         steps:
             - name: Aggregate results
               uses: shiv-source/golden-path/.github/actions/final-gate@main
               with:
                   results: ${{ format('go={0} node={1} security={2} secret-scan={3} codespell={4} actionlint={5}', needs.go.result, needs.node.result, needs.security.result, needs.secret-scan.result, needs.codespell.result, needs.actionlint.result) }}
+                  coverage: ${{ needs.go.outputs.coverage }}
+                  coverage-floor: ${{ needs.go.outputs.coverage_floor }}
+                  pr-comment: true

@@ -21,6 +21,7 @@ golden-path/
 │       ├── parse-config/          # @golden-path/action-parse-config
 │       ├── changed-files/         # @golden-path/action-changed-files
 │       ├── coverage-gate/         # @golden-path/action-coverage-gate
+│       ├── node-coverage-gate/    # @golden-path/action-node-coverage-gate
 │       ├── final-gate/            # @golden-path/action-final-gate
 │       ├── issue-labels/          # @golden-path/action-issue-labels
 │       └── pr-assignee/           # @golden-path/action-pr-assignee

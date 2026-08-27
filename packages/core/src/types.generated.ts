@@ -53,6 +53,15 @@ export interface NodeTarget {
     typecheck_command?: string;
     test_command?: string;
     build_command?: string;
+    /**
+     * Command that runs the tests with coverage (e.g. pnpm test:coverage). When set it replaces the sharded test run and enforces coverage-floor.
+     */
+    coverage_command?: string;
+    coverage_floor?: number;
+    change_detection?: {
+        enabled?: boolean;
+        paths?: string[];
+    };
     final_gate?: boolean;
 }
 export interface ScanConfig {

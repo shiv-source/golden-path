@@ -85,6 +85,15 @@ importers:
         specifier: 3.0.1
         version: 3.0.1
 
+  packages/actions/node-coverage-gate:
+    dependencies:
+      '@actions/core':
+        specifier: 3.0.1
+        version: 3.0.1
+      '@golden-path/core':
+        specifier: workspace:*
+        version: link:../../core
+
   packages/actions/parse-config:
     dependencies:
       '@actions/core':

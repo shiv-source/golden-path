@@ -64,6 +64,9 @@ on:
             coverage:
                 description: 'Total test coverage percentage'
                 value: ${{ jobs.test.outputs.coverage }}
+            coverage_floor:
+                description: 'The configured coverage floor percentage'
+                value: ${{ jobs.test.outputs.coverage_floor }}
 
 permissions:
     contents: read
@@ -113,6 +116,7 @@ jobs:
         timeout-minutes: 15
         outputs:
             coverage: ${{ steps.coverage.outputs.coverage }}
+            coverage_floor: ${{ inputs.coverage-floor }}
         steps:
             # actions/checkout@v7.0.1
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1

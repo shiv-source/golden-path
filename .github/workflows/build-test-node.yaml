@@ -16,7 +16,7 @@ on:
                 type: string
                 default: '.'
             shard-count:
-                description: 'Number of test shards for parallel execution'
+                description: 'Number of test shards for parallel execution (coverage runs force 1)'
                 type: number
                 default: 3
             lint-command:
@@ -35,26 +35,69 @@ on:
                 description: 'Build command'
                 type: string
                 default: 'npm run build'
+            coverage-command:
+                description: 'Command that runs the tests with coverage (e.g. pnpm test:coverage). When set, it replaces the sharded test run.'
+                type: string
+                default: ''
+            coverage-floor:
+                description: 'Minimum required statements coverage percentage (0 disables the gate)'
+                type: number
+                default: 0
+            change-detection:
+                description: 'Skip Node gates when no matching files changed on a pull request'
+                type: boolean
+                default: false
+            change-paths:
+                description: 'JSON array of glob patterns used for change detection'
+                type: string
+                default: '["**/*.{ts,tsx,js,jsx,mjs,cjs}","package.json","pnpm-lock.yaml","yarn.lock","package-lock.json",".github/"]'
+
+        outputs:
+            coverage:
+                description: 'Total statements coverage percentage (when coverage-command is set)'
+                value: ${{ jobs.test.outputs.coverage }}
 
 permissions:
     contents: read
 
 jobs:
+    changes:
+        if: inputs.change-detection
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        outputs:
+            node: ${{ steps.changed.outputs.changed }}
+        steps:
+            # actions/checkout@v7.0.1
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+              with:
+                  fetch-depth: 0
+            - id: changed
+              uses: shiv-source/golden-path/.github/actions/changed-files@main
+              with:
+                  paths: ${{ inputs.change-paths }}
+
     setup:
+        needs: [changes]
+        if: ${{ !inputs.change-detection || needs.changes.outputs.node == 'true' }}
         name: Setup Shards
         runs-on: ubuntu-latest
-        timeout-minutes: 15
+        timeout-minutes: 5
         outputs:
             shards: '${{ steps.shards.outputs.shards }}'
         steps:
             - name: Generate shard list
               id: shards
               run: |
-                  SHARDS=$(seq -s, 1 ${{ inputs.shard-count }})
+                  # Coverage runs once (never sharded); sharded tests otherwise.
+                  SHARD_COUNT=${{ inputs.coverage-command != '' && '1' || inputs.shard-count }}
+                  SHARDS=$(seq -s, 1 $SHARD_COUNT)
                   echo "shards=[$SHARDS]" >> "$GITHUB_OUTPUT"
 
     lint:
         name: Lint
+        needs: [changes]
+        if: ${{ !inputs.change-detection || needs.changes.outputs.node == 'true' }}
         runs-on: ubuntu-latest
         timeout-minutes: 15
         steps:
@@ -71,6 +114,8 @@ jobs:
 
     typecheck:
         name: Type Check
+        needs: [changes]
+        if: ${{ !inputs.change-detection || needs.changes.outputs.node == 'true' }}
         runs-on: ubuntu-latest
         timeout-minutes: 15
         steps:
@@ -87,9 +132,13 @@ jobs:
 
     test:
         name: Test (shard ${{ matrix.shard }})
-        needs: [setup]
+        needs: [changes, setup]
+        if: ${{ !inputs.change-detection || needs.changes.outputs.node == 'true' }}
         runs-on: ubuntu-latest
         timeout-minutes: 15
+        outputs:
+            coverage: ${{ steps.coverage.outputs.coverage }}
+            coverage_floor: ${{ inputs.coverage-floor }}
         strategy:
             fail-fast: false
             matrix:
@@ -103,12 +152,25 @@ jobs:
                   package-manager: ${{ inputs.package-manager }}
                   working-directory: ${{ inputs.working-directory }}
             - name: Test
-              run: ${{ inputs.test-command }} -- --test-shard=${{ matrix.shard }}/${{ inputs.shard-count }}
+              if: ${{ inputs.coverage-command == '' }}
+              # Only append the runner's shard flag when actually sharding —
+              # `--test-shard` is meaningless (and harmful) for single-shard runs.
+              run: >-
+                  ${{ inputs.shard-count > 1 && format('{0} -- --test-shard={1}/{2}', inputs.test-command, matrix.shard, inputs.shard-count) || inputs.test-command }}
               working-directory: ${{ inputs.working-directory }}
+            - name: Coverage gate
+              id: coverage
+              if: ${{ inputs.coverage-command != '' }}
+              uses: shiv-source/golden-path/.github/actions/node-coverage-gate@main
+              with:
+                  working-directory: ${{ inputs.working-directory }}
+                  coverage-command: ${{ inputs.coverage-command }}
+                  floor: ${{ inputs.coverage-floor }}
 
     build:
         name: Build
-        needs: [lint, typecheck, test]
+        needs: [changes, lint, typecheck, test]
+        if: ${{ !inputs.change-detection || needs.changes.outputs.node == 'true' }}
         runs-on: ubuntu-latest
         timeout-minutes: 15
         steps:

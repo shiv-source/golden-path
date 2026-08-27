@@ -82,6 +82,31 @@
                 "typecheck_command": { "type": "string", "default": "npm run typecheck" },
                 "test_command": { "type": "string", "default": "npm test" },
                 "build_command": { "type": "string", "default": "npm run build" },
+                "coverage_command": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Command that runs the tests with coverage (e.g. pnpm test:coverage). When set it replaces the sharded test run and enforces coverage-floor."
+                },
+                "coverage_floor": { "type": "number", "default": 0 },
+                "change_detection": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "enabled": { "type": "boolean", "default": true },
+                        "paths": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "default": [
+                                "**/*.{ts,tsx,js,jsx,mjs,cjs}",
+                                "package.json",
+                                "pnpm-lock.yaml",
+                                "yarn.lock",
+                                "package-lock.json",
+                                ".github/"
+                            ]
+                        }
+                    }
+                },
                 "final_gate": { "type": "boolean", "default": true }
             }
         },

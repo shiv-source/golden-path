@@ -31,14 +31,15 @@ Internal developer platform — standardized, reusable CI/CD workflows, automate
 Referenced by the reusable workflows; cross-repo consumers fetch the action but
 never run `npm install`.
 
-| Action          | Purpose                                                               | Runtime deps      |
-| --------------- | --------------------------------------------------------------------- | ----------------- |
-| `parse-config`  | Read `.github/golden-path.yaml` → validated, normalized JSON          | `@actions/core`   |
-| `changed-files` | PR-aware change detection against glob patterns                       | `@actions/github` |
-| `coverage-gate` | Run Go tests and enforce a coverage floor                             | `@actions/core`   |
-| `final-gate`    | Aggregate job results into one required check                         | `@actions/core`   |
-| `issue-labels`  | Apply three-tier issue labels (type/priority/areas) from form answers | `@actions/core`   |
-| `pr-assignee`   | Auto-assign PR to its author and commit authors                       | `@actions/github` |
+| Action               | Purpose                                                               | Runtime deps      |
+| -------------------- | --------------------------------------------------------------------- | ----------------- |
+| `parse-config`       | Read `.github/golden-path.yaml` → validated, normalized JSON          | `@actions/core`   |
+| `changed-files`      | PR-aware change detection against glob patterns                       | `@actions/github` |
+| `coverage-gate`      | Run Go tests and enforce a coverage floor                             | `@actions/core`   |
+| `node-coverage-gate` | Run Node coverage and enforce a floor from coverage-summary.json      | `@actions/core`   |
+| `final-gate`         | Aggregate job results into one check + rich report / PR comment       | `@actions/core`   |
+| `issue-labels`       | Apply three-tier issue labels (type/priority/areas) from form answers | `@actions/core`   |
+| `pr-assignee`        | Auto-assign PR to its author and commit authors                       | `@actions/github` |
 
 ### Composite Actions (bash steps, `using: composite`)
 

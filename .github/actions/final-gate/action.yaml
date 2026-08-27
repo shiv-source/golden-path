@@ -1,18 +1,52 @@
 name: 'Final Gate'
-description: 'Aggregate upstream job results into a single required check that fails on any failure/cancelled job.'
+description: >-
+    Aggregate upstream job results into a single required check, render a rich
+    step-summary report (job + coverage tables), and optionally upsert a
+    marker-tagged PR comment. Fails unless every listed job succeeded or was
+    skipped.
 
 inputs:
     results:
         description: 'Space-separated "job=result" pairs (e.g. "lint=success test=failure build=skipped")'
         required: true
     coverage:
-        description: 'Reported coverage percentage (optional)'
+        description: 'Total Go/backend coverage % to render in the report (empty = omit)'
         required: false
         default: ''
+    coverage-floor:
+        description: 'Backend coverage floor %, shown next to the actual %'
+        required: false
+        default: ''
+    web-coverage:
+        description: 'Total frontend coverage % to render in the report (empty = omit)'
+        required: false
+        default: ''
+    web-coverage-floor:
+        description: 'Frontend coverage floor %, shown next to the actual %'
+        required: false
+        default: ''
+    report:
+        description: 'Render the rich step-summary report (true/false)'
+        required: false
+        default: 'true'
+    pr-comment:
+        description: 'Upsert a marker-tagged CI report PR comment on pull_request runs (true/false)'
+        required: false
+        default: 'false'
+    token:
+        description: 'Token with pull-requests: write permission for the PR comment. Defaults to the workflow token.'
+        required: false
+        default: '${{ github.token }}'
 
 outputs:
     passed:
-        description: 'true when every job passed'
+        description: 'true when every job succeeded or was skipped'
+    failed:
+        description: 'Number of jobs that did not succeed or skip'
+    passed_count:
+        description: 'Number of jobs that succeeded or were skipped'
+    total:
+        description: 'Number of jobs counted in the report'
 
 runs:
     using: node20

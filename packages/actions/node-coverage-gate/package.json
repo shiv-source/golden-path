@@ -1,0 +1,15 @@
+{
+    "name": "@golden-path/action-node-coverage-gate",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "description": "TypeScript action: run a Node coverage command and enforce a coverage floor from vitest's coverage-summary.json.",
+    "scripts": {
+        "typecheck": "tsc -p tsconfig.json --noEmit",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "@actions/core": "3.0.1",
+        "@golden-path/core": "workspace:*"
+    }
+}

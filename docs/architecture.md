@@ -12,7 +12,7 @@
         ▼               ▼                       ▼                  ▼
 ┌───────────────┐ ┌───────────────────┐ ┌──────────────────┐ ┌──────────────┐
 │ Reusable       │ │ TypeScript Actions│ │ Onboarding System│ │ Profiles (4) │
-│ Workflows (24) │ │ (6)               │ │ (13 .mjs scripts)│ │              │
+│ Workflows (24) │ │ (7)               │ │ (13 .mjs scripts)│ │              │
 │                │ │                   │ │                  │ │              │
 │ config-driven  │ │ parse-config      │ │ issue → parse →  │ │ common/      │
 │ orchestrator,  │ │ changed-files     │ │ validate → config│ │ node-library/│
@@ -95,15 +95,16 @@ The remaining workflows cover operational tooling: `actionlint`, `renovate`,
 ## TypeScript Action Layer
 
 The actions under `.github/actions/` are the reusable building blocks referenced
-by the workflows. Six are real **JavaScript actions** written in TypeScript; the
-rest are composite actions that orchestrate upstream tooling.
+by the workflows. Seven are real **JavaScript actions** written in TypeScript;
+the rest are composite actions that orchestrate upstream tooling.
 
 | Action                  | Type      | Purpose                                                               |
 | ----------------------- | --------- | --------------------------------------------------------------------- |
 | `parse-config`          | JS (TS)   | Read `.github/golden-path.yaml` → validated, normalized outputs       |
 | `changed-files`         | JS (TS)   | PR-aware change detection against globs                               |
 | `coverage-gate`         | JS (TS)   | Run Go tests, enforce a coverage floor                                |
-| `final-gate`            | JS (TS)   | Aggregate job results into one required check                         |
+| `node-coverage-gate`    | JS (TS)   | Run Node coverage, enforce a floor from coverage-summary.json         |
+| `final-gate`            | JS (TS)   | Aggregate job results into one check + rich report / PR comment       |
 | `issue-labels`          | JS (TS)   | Apply three-tier issue labels (type/priority/areas) from form answers |
 | `pr-assignee`           | JS (TS)   | Auto-assign PR to its author and commit authors                       |
 | `setup-go`              | composite | Install Go from a version or go.mod/go.work (+ optional cache)        |
