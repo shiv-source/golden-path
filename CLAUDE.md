@@ -109,6 +109,7 @@ All reusable workflows live in `.github/workflows/`. Every script is consumed by
 | `apply-repository-config.yaml` | Triggered            | Profile merge → PR into target repo                                    |
 | `issue-labels.yaml`            | Reusable             | Apply three-tier issue labels from issue-form answers                  |
 | `pr-assignee.yaml`             | Reusable             | Auto-assign PR to its author and commit authors                        |
+| `self-pr-assignee.yaml`        | Triggered            | Golden-path's own PR auto-assignment                                   |
 
 ### TypeScript Actions
 
