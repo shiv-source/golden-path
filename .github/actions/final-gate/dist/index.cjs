@@ -19392,7 +19392,9 @@ async function upsertComment(report) {
     const event = JSON.parse(await (0, import_promises.readFile)(eventPath, "utf8"));
     number = event.pull_request?.number ?? event.issue?.number;
   } catch (error2) {
-    console.warn(`skipping PR comment: could not read event payload (${error2 instanceof Error ? error2.message : String(error2)})`);
+    console.warn(
+      `skipping PR comment: could not read event payload (${error2 instanceof Error ? error2.message : String(error2)})`
+    );
     return;
   }
   if (typeof number !== "number") {
@@ -19419,7 +19421,9 @@ async function upsertComment(report) {
           body: JSON.stringify({ body: report })
         });
         if (!updateResponse.ok) {
-          console.warn(`failed to update PR comment: ${updateResponse.status} ${await updateResponse.text()}`);
+          console.warn(
+            `failed to update PR comment: ${updateResponse.status} ${await updateResponse.text()}`
+          );
           return;
         }
         console.log("updated quality gate PR comment");
@@ -19455,9 +19459,7 @@ async function main() {
       console.log("all checks passed");
     }
     if (getInput("pr-comment") === "true") {
-      await upsertComment(
-        buildReport(results, { coverage, coverageFloor, webCoverage, webCoverageFloor })
-      );
+      await upsertComment(buildReport(results, { coverage, coverageFloor, webCoverage, webCoverageFloor }));
     }
   } catch (error2) {
     setFailed(error2 instanceof Error ? error2.message : String(error2));
