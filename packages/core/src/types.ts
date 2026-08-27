@@ -19,6 +19,7 @@ export type ChangeDetectionConfig = RequiredDeep<Generated.ChangeDetection>;
 export type CrossCompileConfig = RequiredDeep<Generated.CrossCompile>;
 export type ScanConfig = RequiredDeep<Generated.ScanConfig>;
 export type SecretScanConfig = RequiredDeep<Generated.SecretScanConfig>;
+export type CodespellConfig = RequiredDeep<Generated.CodespellConfig>;
 export type FlagConfig = RequiredDeep<Generated.FlagConfig>;
 
 /** Raw, un-normalized config as accepted by the JSON Schema (keys optional). */

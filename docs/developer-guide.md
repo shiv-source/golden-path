@@ -114,7 +114,10 @@ node:
 
 security-scan: { enabled: true }
 secret-scan: { enabled: true, tool: betterleaks } # tool: betterleaks | ggshield
-codespell: { enabled: true }
+codespell:
+    enabled: true
+    skip: '.git,node_modules,dist,build,vendor,package-lock.json,pnpm-lock.yaml,*.lock,*.sum'
+    ignore-words-file: '' # one word per line for intentional/technical terms
 actionlint: { enabled: true }
 ```
 

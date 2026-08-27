@@ -21,8 +21,8 @@ describe('toOutputs', () => {
     it('reflects disabled gates', () => {
         const outputs = toOutputs({
             ...DEFAULTS,
-            codespell: { enabled: false },
-            actionlint: { enabled: false },
+            codespell: { ...DEFAULTS.codespell, enabled: false },
+            actionlint: { ...DEFAULTS.actionlint, enabled: false },
         });
         expect(outputs.codespell_enabled).toBe('false');
         expect(outputs.actionlint_enabled).toBe('false');

@@ -144,7 +144,12 @@ go:
 # pin one (language: go).
 security-scan: { enabled: true }
 secret-scan: { enabled: true, tool: betterleaks }
-codespell: { enabled: true }
+# codespell: skip vendored/generated paths (lockfiles, bundles) and ignore
+# intentional technical terms via ignore-words-file (one word per line).
+codespell:
+    enabled: true
+    skip: '.git,node_modules,dist,build,vendor,package-lock.json,pnpm-lock.yaml,*.lock,*.sum'
+    ignore-words-file: '' # e.g. .codespellignore
 actionlint: { enabled: true }
 ```
 

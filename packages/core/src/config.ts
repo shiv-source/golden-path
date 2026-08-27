@@ -64,7 +64,12 @@ export const DEFAULTS: GoldenPathConfig = {
     node: [],
     security_scan: { enabled: true, setup_command: '', language: '' },
     secret_scan: { enabled: true, tool: 'betterleaks' },
-    codespell: { enabled: true },
+    codespell: {
+        enabled: true,
+        skip: '.git,node_modules,dist,build,vendor,package-lock.json,pnpm-lock.yaml,*.lock,*.sum',
+        ignore_words_file: '',
+        args: '',
+    },
     actionlint: { enabled: true },
 };
 

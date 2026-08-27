@@ -176,6 +176,26 @@ describe('normalizeConfig', () => {
         expect(config.node[0]?.name).toBe('web');
         expect(GO_TARGET_DEFAULTS.name).toBe('');
     });
+
+    it('normalizes codespell options (skip/ignore-words-file/args) over defaults', () => {
+        const defaults = normalizeConfig({});
+        expect(defaults.codespell.enabled).toBe(true);
+        expect(defaults.codespell.skip).toContain('pnpm-lock.yaml');
+        expect(defaults.codespell.ignore_words_file).toBe('');
+        expect(defaults.codespell.args).toBe('');
+
+        const config = normalizeConfig({
+            codespell: {
+                enabled: true,
+                skip: '.git,node_modules,*swagger-ui*',
+                'ignore-words-file': '.codespellignore',
+                args: '--ignore-regex keep-alive',
+            },
+        });
+        expect(config.codespell.skip).toBe('.git,node_modules,*swagger-ui*');
+        expect(config.codespell.ignore_words_file).toBe('.codespellignore');
+        expect(config.codespell.args).toBe('--ignore-regex keep-alive');
+    });
 });
 
 describe('validateConfig', () => {
