@@ -148,7 +148,7 @@ secret-scan: { enabled: true, tool: betterleaks }
 # intentional technical terms via ignore-words-file (one word per line).
 codespell:
     enabled: true
-    skip: '.git,node_modules,dist,build,vendor,package-lock.json,pnpm-lock.yaml,*.lock,*.sum'
+    skip: '.git,node_modules,dist,build,vendor,package-lock.json,pnpm-lock.yaml,*.lock,*.sum,*swagger-ui*'
     ignore-words-file: '' # e.g. .codespellignore
 actionlint: { enabled: true }
 ```

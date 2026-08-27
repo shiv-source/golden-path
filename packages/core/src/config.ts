@@ -66,7 +66,7 @@ export const DEFAULTS: GoldenPathConfig = {
     secret_scan: { enabled: true, tool: 'betterleaks' },
     codespell: {
         enabled: true,
-        skip: '.git,node_modules,dist,build,vendor,package-lock.json,pnpm-lock.yaml,*.lock,*.sum',
+        skip: '.git,node_modules,dist,build,vendor,package-lock.json,pnpm-lock.yaml,*.lock,*.sum,*swagger-ui*',
         ignore_words_file: '',
         args: '',
     },

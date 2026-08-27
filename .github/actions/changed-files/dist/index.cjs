@@ -43410,7 +43410,7 @@ var golden_path_schema_default = {
         enabled: { type: "boolean", default: true },
         skip: {
           type: "string",
-          default: ".git,node_modules,dist,build,vendor,package-lock.json,pnpm-lock.yaml,*.lock,*.sum",
+          default: ".git,node_modules,dist,build,vendor,package-lock.json,pnpm-lock.yaml,*.lock,*.sum,*swagger-ui*",
           description: "Comma-separated glob patterns of paths for codespell to skip (vendor dirs, lockfiles, generated bundles)"
         },
         ignore_words_file: {

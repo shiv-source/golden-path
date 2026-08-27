@@ -17,7 +17,7 @@ inputs:
     skip:
         description: 'Comma-separated paths to skip'
         required: false
-        default: '.git,node_modules,dist,build,vendor,package-lock.json,*.lock,*.sum'
+        default: '.git,node_modules,dist,build,vendor,package-lock.json,pnpm-lock.yaml,*.lock,*.sum,*swagger-ui*'
     args:
         description: 'Extra codespell arguments'
         required: false

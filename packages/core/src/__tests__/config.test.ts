@@ -181,6 +181,7 @@ describe('normalizeConfig', () => {
         const defaults = normalizeConfig({});
         expect(defaults.codespell.enabled).toBe(true);
         expect(defaults.codespell.skip).toContain('pnpm-lock.yaml');
+        expect(defaults.codespell.skip).toContain('*swagger-ui*');
         expect(defaults.codespell.ignore_words_file).toBe('');
         expect(defaults.codespell.args).toBe('');
 
