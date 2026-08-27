@@ -43,6 +43,10 @@ on:
                 description: 'Minimum required statements coverage percentage (0 disables the gate)'
                 type: number
                 default: 0
+            coverage-summary-path:
+                description: 'Path to the vitest coverage-summary.json, relative to the working directory'
+                type: string
+                default: 'coverage/coverage-summary.json'
             change-detection:
                 description: 'Skip Node gates when no matching files changed on a pull request'
                 type: boolean
@@ -166,6 +170,7 @@ jobs:
                   working-directory: ${{ inputs.working-directory }}
                   coverage-command: ${{ inputs.coverage-command }}
                   floor: ${{ inputs.coverage-floor }}
+                  coverage-summary-path: ${{ inputs.coverage-summary-path }}
 
     build:
         name: Build
