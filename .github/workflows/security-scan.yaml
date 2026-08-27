@@ -14,10 +14,16 @@ on:
                 description: 'Path to custom Gitleaks config (defaults to built-in rules)'
                 type: string
                 default: ''
+            build-mode:
+                description: >-
+                    CodeQL build mode: none (default), autobuild, or manual. Use
+                    none for interpreted languages (go, node, python); use
+                    autobuild for compiled languages such as java or C/C++.
+                type: string
+                default: 'none'
 
 permissions:
     contents: read
-    security-events: write
 
 jobs:
     gitleaks:
@@ -37,6 +43,8 @@ jobs:
         name: CodeQL
         runs-on: ubuntu-latest
         timeout-minutes: 15
+        permissions:
+            security-events: write
         steps:
             # actions/checkout@v7.0.1
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -45,5 +53,6 @@ jobs:
             - uses: github/codeql-action/init@486fec2a3ea2626afcd8c7e9208b4f515078dd7e
               with:
                   languages: '${{ inputs.language }}'
+                  build-mode: ${{ inputs.build-mode }}
             # github/codeql-action/analyze@codeql-bundle-v2.26.4
             - uses: github/codeql-action/analyze@486fec2a3ea2626afcd8c7e9208b4f515078dd7e
