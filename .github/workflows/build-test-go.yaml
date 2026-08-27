@@ -55,6 +55,14 @@ on:
                 description: 'Extra golangci-lint arguments'
                 type: string
                 default: ''
+            setup-command:
+                description: 'Optional command run before the gates (after setup-go) to prepare the module, e.g. build embedded assets (make web)'
+                type: string
+                default: ''
+            test-args:
+                description: 'Arguments for the coverage-gate go test run'
+                type: string
+                default: '-race -coverprofile=coverage.out ./...'
             final-gate:
                 description: 'Emit a single aggregated required check'
                 type: boolean
@@ -101,6 +109,10 @@ jobs:
                   go-version: ${{ inputs.go-version }}
                   go-version-file: ${{ inputs.go-version-file }}
                   working-directory: ${{ inputs.working-directory }}
+            - name: Setup
+              if: ${{ inputs.setup-command != '' }}
+              run: ${{ inputs.setup-command }}
+              working-directory: ${{ inputs.working-directory }}
             - uses: shiv-source/golden-path/.github/actions/lint-go@main
               with:
                   working-directory: ${{ inputs.working-directory }}
@@ -125,12 +137,17 @@ jobs:
                   go-version: ${{ inputs.go-version }}
                   go-version-file: ${{ inputs.go-version-file }}
                   working-directory: ${{ inputs.working-directory }}
+            - name: Setup
+              if: ${{ inputs.setup-command != '' }}
+              run: ${{ inputs.setup-command }}
+              working-directory: ${{ inputs.working-directory }}
             - name: Test with coverage gate
               id: coverage
               uses: shiv-source/golden-path/.github/actions/coverage-gate@main
               with:
                   working-directory: ${{ inputs.working-directory }}
                   floor: ${{ inputs.coverage-floor }}
+                  test-args: ${{ inputs.test-args }}
 
     build:
         needs: [changes]
@@ -150,6 +167,10 @@ jobs:
                   go-version: ${{ inputs.go-version }}
                   go-version-file: ${{ inputs.go-version-file }}
                   working-directory: ${{ inputs.working-directory }}
+            - name: Setup
+              if: ${{ inputs.setup-command != '' }}
+              run: ${{ inputs.setup-command }}
+              working-directory: ${{ inputs.working-directory }}
             - name: Build (${{ matrix.goos }}/${{ matrix.goarch }})
               run: GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build ./...
               working-directory: ${{ inputs.working-directory }}

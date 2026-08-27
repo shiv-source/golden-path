@@ -186,6 +186,10 @@ only ever call the orchestrator.
 - `golangci-lint-config` (default `.golangci.yaml`)
 - `golangci-lint-timeout` (default `5m`)
 - `golangci-lint-args` (default `''`)
+- `setup-command` (default `''` — command run after `setup-go`, before the
+  gates, to prepare the module; e.g. `make web` to build embedded assets)
+- `test-args` (default `-race -coverprofile=coverage.out ./...` — arguments
+  for the coverage gate's `go test`)
 - `final-gate` (boolean, default `false` — emit a single aggregated required check)
 
 **security-scan.yaml:**
