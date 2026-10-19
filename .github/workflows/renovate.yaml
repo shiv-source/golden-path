@@ -40,7 +40,7 @@ jobs:
             - name: Run Renovate (auto-detected config)
               if: inputs.configuration-file == ''
               # renovatebot/github-action@v46.2.4
-              uses: renovatebot/github-action@5402b206248e5a8c8427a15102702eb9c1793efc
+              uses: renovatebot/github-action@f0f41e5f2e706165f6814b1d0f0d0e319de7d1d9
               with:
                   token: ${{ inputs.use-github-token && github.token || secrets.RENOVATE_TOKEN }}
                   renovate-version: ${{ inputs.renovate-version }}
@@ -48,7 +48,7 @@ jobs:
             - name: Run Renovate (explicit config)
               if: inputs.configuration-file != ''
               # renovatebot/github-action@v46.2.4
-              uses: renovatebot/github-action@5402b206248e5a8c8427a15102702eb9c1793efc
+              uses: renovatebot/github-action@f0f41e5f2e706165f6814b1d0f0d0e319de7d1d9
               with:
                   token: ${{ inputs.use-github-token && github.token || secrets.RENOVATE_TOKEN }}
                   renovate-version: ${{ inputs.renovate-version }}
